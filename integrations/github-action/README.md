@@ -19,13 +19,17 @@ on:
   pull_request:
     paths: ["ai-intake/**.json"]
 
+permissions:
+  contents: read   # least privilege; add pull-requests: write if you post comments
+
 jobs:
   evaluate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
-      # Your org's rule packs live in one governed repo
+      # Your org's rule packs live in one governed repo — pin a tag or SHA
       - uses: actions/checkout@v4
         with:
           repository: your-org/governance-rules
@@ -37,9 +41,11 @@ jobs:
       - run: pip install git+https://github.com/OSMoats/hashimori
 
       - name: Evaluate changed intakes
+        env:
+          BASE_REF: ${{ github.base_ref }}   # via env, never interpolated into the script
         run: |
           set +e; status=0
-          for f in $(git diff --name-only origin/${{ github.base_ref }} -- 'ai-intake/*.json'); do
+          for f in $(git diff --name-only "origin/${BASE_REF}...HEAD" -- 'ai-intake/*.json'); do
             echo "::group::$f"
             hashimori evaluate --rules governance-rules/rulepacks --context "$f" --exit-code
             rc=$?
