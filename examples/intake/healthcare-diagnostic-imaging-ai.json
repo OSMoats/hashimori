@@ -1,0 +1,37 @@
+{
+  "use_case": {
+    "name": "Pediatric Chest X-Ray Pneumothorax Detection AI",
+    "description": "Flags chest X-rays with a suspected pneumothorax; every flag is confirmed or dismissed by a radiologist before the report is finalized.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["diagnostic_imaging"],
+    "subjects": ["patients", "minors"],
+    "affected_people": 6000
+  },
+  "data": {
+    "categories": ["phi"]
+  },
+  "model": {
+    "provider": "approved_imaging_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false,
+    "baa_signed": true
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": true
+  },
+  "clinical": {
+    "decision_support_type": "diagnostic",
+    "samd_classification_required": true,
+    "fda_cleared": true,
+    "ai_generated_documentation": false,
+    "validation_study_completed": true
+  }
+}
