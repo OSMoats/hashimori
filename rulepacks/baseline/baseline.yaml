@@ -1,0 +1,72 @@
+version: 1
+pack:
+  name: baseline
+  description: >
+    Baseline graduated governance — risk factors that add up to a score, and
+    tiers that turn the score into an outcome. Calibrate the weights to your
+    risk appetite; the shape is the point. Designed to pair with the red-zone
+    pack (red zones are checked first and short-circuit).
+
+risk_factors:
+  - id: RISK-001
+    name: Handles personal data
+    when: {path: data.categories, contains: personal_data}
+    weight: 3
+    refs: [NIST-AI-RMF:MAP-4.1]
+
+  - id: RISK-002
+    name: Handles sensitive personal data (with an approved provider)
+    when: {path: data.categories, contains: sensitive_personal_data}
+    weight: 4
+    refs: [GDPR:Art.9]
+
+  - id: RISK-003
+    name: Customer- or public-facing
+    when: {path: use_case.audience, in: [external, public, customers]}
+    weight: 2
+    refs: [NIST-AI-RMF:MAP-1.1]
+
+  - id: RISK-004
+    name: Takes autonomous actions (reversible)
+    when: {path: agent.autonomous_actions, is: true}
+    weight: 3
+    refs: [NIST-AI-RMF:MANAGE-2.3]
+
+  - id: RISK-005
+    name: Large blast radius (>10k people affected)
+    when: {path: use_case.affected_people, gte: 10000}
+    weight: 2
+
+  - id: RISK-006
+    name: New or unassessed model provider
+    when: {path: model.provider_assessed, is: false}
+    weight: 2
+    refs: [NIST-AI-RMF:GOVERN-6.1]
+
+  - id: RISK-007
+    name: No output logging / audit trail planned
+    when: {path: observability.logging, is: false}
+    weight: 3
+    refs: [ISO-42001:A.6.2.8]
+
+  - id: RISK-008
+    name: Influences content people see at scale (ranking, moderation, recommendations)
+    when: {path: use_case.capabilities, contains: content_ranking}
+    weight: 2
+
+tiers:
+  - name: fast_track
+    max_score: 2
+    outcome: approved
+    obligations: [enable_logging, register_in_ai_inventory, annual_review]
+
+  - name: standard_review
+    max_score: 6
+    outcome: needs_review
+    reviewers: [security]
+    sla_days: 5
+
+  - name: elevated_review
+    outcome: needs_review
+    reviewers: [security, privacy, legal, ai_governance_board]
+    sla_days: 15

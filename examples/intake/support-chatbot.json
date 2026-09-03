@@ -1,0 +1,31 @@
+{
+  "use_case": {
+    "name": "Customer Support Chatbot",
+    "description": "Public-facing chatbot that answers billing and product questions, with escalation to human agents.",
+    "audience": "external",
+    "decision_impact": "none",
+    "capabilities": ["conversation", "rag_search"],
+    "subjects": ["customers"],
+    "affected_people": 8000
+  },
+  "data": {
+    "categories": ["personal_data", "account_metadata"]
+  },
+  "model": {
+    "provider": "approved_api_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true,
+    "escalation_path": "tier2_support"
+  },
+  "agent": {
+    "autonomous_actions": false,
+    "irreversible_effects": false
+  },
+  "observability": {
+    "logging": true
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "use_case": {
+    "name": "Autonomous Loan Pre-Approval Agent",
+    "description": "Agent that evaluates applications and issues pre-approval decisions end-to-end, no analyst involved.",
+    "audience": "external",
+    "decision_impact": "credit",
+    "capabilities": ["conversation", "decisioning"],
+    "subjects": ["customers"],
+    "affected_people": 40000
+  },
+  "data": {
+    "categories": ["personal_data", "financial_records"]
+  },
+  "model": {
+    "provider": "approved_api_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": false
+  },
+  "agent": {
+    "autonomous_actions": true,
+    "irreversible_effects": true,
+    "approval_gate": false,
+    "rollback_plan": false
+  },
+  "observability": {
+    "logging": true
+  }
+}

@@ -1,0 +1,49 @@
+# Policy decision tests — your policy, tested like code.
+# Run:  hashimori test examples/tests/decisions.yaml --rules rulepacks/
+
+tests:
+  - name: internal docs answerbot fast-tracks
+    context_file: ../intake/docs-answerbot.json
+    expect: {decision: APPROVED, tier: fast_track}
+
+  - name: support chatbot routes to standard security review
+    context_file: ../intake/support-chatbot.json
+    expect: {decision: NEEDS_REVIEW, tier: standard_review}
+
+  - name: autonomous loan agent is denied without a meeting
+    context_file: ../intake/loan-agent.json
+    expect: {decision: DENIED, red_zones: [REDZONE-001, REDZONE-005]}
+
+  - name: vague submission fails closed, never approves
+    context_file: ../intake/vague-submission.json
+    expect: {decision: NEEDS_REVIEW}
+
+  - name: adding a human reviewer clears REDZONE-001 but not REDZONE-005
+    context:
+      use_case: {decision_impact: credit, audience: external, subjects: [customers]}
+      data: {categories: [personal_data, financial_records]}
+      model: {provider_approved: true, provider_assessed: true, trains_on_customer_data: false}
+      oversight: {human_in_loop: true}
+      agent: {autonomous_actions: true, irreversible_effects: true, approval_gate: false, rollback_plan: false}
+      observability: {logging: true}
+    expect: {decision: DENIED, red_zones: [REDZONE-005]}
+
+  - name: fixing the gate and rollback moves the loan agent to elevated review
+    context:
+      use_case: {decision_impact: credit, audience: external, capabilities: [decisioning], subjects: [customers], affected_people: 40000}
+      data: {categories: [personal_data, financial_records]}
+      model: {provider_approved: true, provider_assessed: true, trains_on_customer_data: false}
+      oversight: {human_in_loop: true}
+      agent: {autonomous_actions: true, irreversible_effects: true, approval_gate: true, rollback_plan: true}
+      observability: {logging: true}
+    expect: {decision: NEEDS_REVIEW, tier: elevated_review}
+
+  - name: employee emotion recognition has no path to yes
+    context:
+      use_case: {capabilities: [emotion_recognition], subjects: [employees], decision_impact: none, audience: internal}
+      data: {categories: [internal_docs]}
+      model: {provider_approved: true, provider_assessed: true, trains_on_customer_data: false}
+      oversight: {human_in_loop: true}
+      agent: {autonomous_actions: false, irreversible_effects: false}
+      observability: {logging: true}
+    expect: {decision: DENIED, red_zones: [REDZONE-003]}

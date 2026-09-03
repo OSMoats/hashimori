@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.DS_Store
+
+# local helpers, not part of the public repo
+film-demo.sh
+publish-to-github.sh

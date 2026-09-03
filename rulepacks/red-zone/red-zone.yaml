@@ -1,0 +1,112 @@
+version: 1
+pack:
+  name: red-zone
+  description: >
+    Universal red zones — AI use case patterns that short-circuit to DENIED
+    with no human review. These encode the "never" list most enterprise AI
+    policies already contain in prose. Edit to match yours: the point is not
+    these exact rules, it is that your "never" list becomes executable.
+
+red_zones:
+  - id: REDZONE-001
+    name: Consequential decisions with no human in the loop
+    when:
+      all:
+        - path: use_case.decision_impact
+          in: [credit, employment, housing, insurance, medical, legal, law_enforcement, education_access]
+        - path: oversight.human_in_loop
+          is: false
+    message: >
+      Fully automated decisions that materially affect a person's access to
+      credit, work, housing, care, or justice are categorically prohibited.
+    remedy: >
+      Put a qualified human between the model output and the decision taking
+      effect (review-and-approve, not review-after-the-fact), then resubmit.
+    refs: [NIST-AI-RMF:MANAGE-2.2, EU-AI-Act:Art.14, ISO-42001:A.9.2]
+
+  - id: REDZONE-002
+    name: Sensitive personal data sent to an unapproved model provider
+    when:
+      all:
+        - path: data.categories
+          contains: sensitive_personal_data
+        - path: model.provider_approved
+          is: false
+    message: >
+      Health, biometric, financial-account, or children's data may not leave
+      the approved-provider boundary. No exceptions via intake.
+    remedy: >
+      Use a provider on the approved list (or a self-hosted model), or strip
+      sensitive categories from the data path, then resubmit.
+    refs: [NIST-AI-RMF:MAP-4.1, GDPR:Art.9, ISO-42001:A.7.4]
+
+  - id: REDZONE-003
+    name: Emotion recognition or biometric categorization of employees
+    when:
+      any:
+        - all:
+            - path: use_case.capabilities
+              contains: emotion_recognition
+            - path: use_case.subjects
+              contains: employees
+        - all:
+            - path: use_case.capabilities
+              contains: biometric_categorization
+            - path: use_case.subjects
+              contains: employees
+    message: >
+      Inferring emotional state or biometric categories of employees is
+      prohibited regardless of stated purpose.
+    remedy: >
+      There is no remediation path for this pattern. Reframe the use case
+      without inference about individuals.
+    refs: [EU-AI-Act:Art.5, NIST-AI-RMF:GOVERN-1.1]
+
+  - id: REDZONE-004
+    name: Social scoring of individuals
+    when:
+      path: use_case.capabilities
+      contains: social_scoring
+    message: >
+      Ranking or scoring individuals' trustworthiness from unrelated social
+      or behavioral signals is prohibited.
+    remedy: >
+      There is no remediation path for this pattern.
+    refs: [EU-AI-Act:Art.5]
+
+  - id: REDZONE-005
+    name: Irreversible autonomous actions without a gate or rollback
+    when:
+      all:
+        - path: agent.autonomous_actions
+          is: true
+        - path: agent.irreversible_effects
+          is: true
+        - any:
+            - path: agent.approval_gate
+              is: false
+            - path: agent.rollback_plan
+              is: false
+    message: >
+      Agents that move money, delete data, or change production systems must
+      have an approval gate AND a rollback plan before they run unattended.
+    remedy: >
+      Add an approval gate for irreversible actions and a tested rollback
+      plan, then resubmit.
+    refs: [NIST-AI-RMF:MANAGE-2.3, ISO-42001:A.9.4]
+
+  - id: REDZONE-006
+    name: Training on customer data without a legal basis
+    when:
+      all:
+        - path: model.trains_on_customer_data
+          is: true
+        - path: model.training_legal_basis
+          is: false
+    message: >
+      Customer data may not be used for training or fine-tuning without a
+      documented contractual or consent basis.
+    remedy: >
+      Obtain and document the legal basis (consent, contract clause, or DPA
+      amendment) with counsel sign-off, then resubmit.
+    refs: [GDPR:Art.6, NIST-AI-RMF:GOVERN-1.4]

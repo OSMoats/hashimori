@@ -1,0 +1,18 @@
+{
+  "use_case": {
+    "name": "AI Meeting Genie",
+    "description": "It summarizes meetings and stuff.",
+    "audience": "internal"
+  },
+  "data": {
+    "categories": ["internal_docs"]
+  },
+  "model": {
+    "provider": "some_new_startup",
+    "provider_approved": true,
+    "provider_assessed": true
+  },
+  "observability": {
+    "logging": true
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "use_case": {
+    "name": "Internal Docs Answerbot",
+    "description": "RAG assistant that answers employee questions from the public handbook and internal wiki.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["rag_search"],
+    "subjects": [],
+    "affected_people": 900
+  },
+  "data": {
+    "categories": ["public", "internal_docs"]
+  },
+  "model": {
+    "provider": "self_hosted",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": false,
+    "irreversible_effects": false
+  },
+  "observability": {
+    "logging": true
+  }
+}
