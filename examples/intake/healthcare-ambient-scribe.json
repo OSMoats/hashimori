@@ -1,0 +1,36 @@
+{
+  "use_case": {
+    "name": "Ambient Clinical Documentation Scribe",
+    "description": "Listens to the visit and drafts the note; the clinician reviews and signs before it is filed.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["clinical_documentation"],
+    "subjects": ["patients"],
+    "affected_people": 12000
+  },
+  "data": {
+    "categories": ["phi"]
+  },
+  "model": {
+    "provider": "approved_healthtech_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false,
+    "baa_signed": true
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": true
+  },
+  "clinical": {
+    "decision_support_type": "administrative",
+    "ai_generated_documentation": true,
+    "clinician_attestation_before_record": true,
+    "validation_study_completed": true
+  }
+}
