@@ -293,7 +293,17 @@ def main(argv: list[str] | None = None) -> int:
     p_init.set_defaults(func=cmd_init)
 
     args = parser.parse_args(argv)
-    return args.func(args)
+    try:
+        return args.func(args)
+    except (ValueError, TypeError, OSError, yaml.YAMLError, json.JSONDecodeError) as exc:
+        # A malformed rule pack (broken YAML, or valid YAML in the wrong
+        # shape -- e.g. `red_zones: "oops"` instead of a list) or a bad
+        # --context/--rules path used to surface as a raw Python traceback
+        # here, with no clean message and an exit code (1, from the
+        # unhandled exception) outside the documented 0/78/2 --exit-code
+        # contract. Same exit code, but a message instead of a stack trace.
+        print(f"hashimori: error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":  # pragma: no cover

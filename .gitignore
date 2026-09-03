@@ -5,6 +5,7 @@ build/
 dist/
 .venv/
 .pytest_cache/
+.coverage
 .DS_Store
 
 # local helpers, not part of the public repo
