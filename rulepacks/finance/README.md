@@ -61,4 +61,5 @@ separately from `tests/test_engine.py` for the reason above.
 
 ## Author
 
-Contributed by Tushar Badlani, in a personal capacity.
+Built by [Tushar Badlani](https://tusharbadlani.studio/), in a personal
+capacity.
