@@ -88,10 +88,16 @@ def _compare(op: str, actual: Any, expected: Any) -> bool:
         return _norm(actual) == _norm(expected)
     if op == "is_not":
         return _norm(actual) != _norm(expected)
-    if op == "in":
-        return _norm(actual) in [_norm(v) for v in expected]
-    if op == "not_in":
-        return _norm(actual) not in [_norm(v) for v in expected]
+    if op in ("in", "not_in"):
+        if not isinstance(expected, (list, tuple, set)):
+            raise ValueError(
+                f"'{op}' expects a list of values, got {expected!r}. Did you "
+                f"forget the brackets — '{op}: [{expected}]'? A bare string "
+                f"is otherwise checked character by character, which almost "
+                f"never matches and silently defeats the rule."
+            )
+        values = [_norm(v) for v in expected]
+        return (_norm(actual) in values) if op == "in" else (_norm(actual) not in values)
     if op == "contains":
         if isinstance(actual, (list, tuple, set)):
             return _norm(expected) in [_norm(v) for v in actual]

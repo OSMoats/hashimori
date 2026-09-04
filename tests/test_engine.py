@@ -53,6 +53,25 @@ def test_exists_operator():
     assert evaluate_condition({"path": "b", "exists": False}, {"a": 1}).is_true
 
 
+def test_in_and_not_in_reject_a_bare_string_instead_of_a_list():
+    # A pack author writing `in: credit` instead of `in: [credit]` used to be
+    # silently interpreted as "credit" in list("credit") -- checked one
+    # character at a time, which a real value almost never matches. That
+    # turned a rule meant to fire into one that silently never does, with no
+    # error anywhere: `hashimori validate` catches this typo, but
+    # `hashimori evaluate` -- what actually runs in production -- did not,
+    # so a red zone written to deny a real case would come back APPROVED.
+    # `in`/`not_in` now fail loudly instead of silently misevaluating.
+    with pytest.raises(ValueError, match="expects a list"):
+        evaluate_condition({"path": "x", "in": "credit"}, {"x": "credit"})
+    with pytest.raises(ValueError, match="expects a list"):
+        evaluate_condition({"path": "x", "not_in": "ab"}, {"x": "z"})
+
+    # correctly bracketed still behaves exactly as before
+    assert evaluate_condition({"path": "x", "in": ["credit"]}, {"x": "credit"}).value is True
+    assert evaluate_condition({"path": "x", "not_in": ["a", "b"]}, {"x": "z"}).value is True
+
+
 # ---------------------------------------------------------------------------
 # Engine on the shipped examples
 # ---------------------------------------------------------------------------
