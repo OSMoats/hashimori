@@ -58,3 +58,7 @@ auto-approval. Keep industry packs on their own, load-scoped to `red-zone`.
 exercises all six red zones plus the fail-closed path on a vague submission.
 `tests/test_finance_pack.py` runs the same pack through pytest, scoped
 separately from `tests/test_engine.py` for the reason above.
+
+## Author
+
+Contributed by Tushar Badlani, in a personal capacity.
