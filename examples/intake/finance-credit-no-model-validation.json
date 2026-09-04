@@ -1,0 +1,34 @@
+{
+  "use_case": {
+    "name": "Small-Business Loan Auto-Decisioning",
+    "description": "New scoring model for small-business loans, shipped straight from the data science team to production.",
+    "audience": "external",
+    "decision_impact": "credit",
+    "capabilities": ["decisioning"],
+    "subjects": ["customers"],
+    "affected_people": 8000
+  },
+  "data": {
+    "categories": ["personal_data", "credit_report_data"]
+  },
+  "model": {
+    "provider": "approved_fintech_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": true
+  },
+  "finance": {
+    "decision_type": "credit_decisioning",
+    "adverse_action_explainable": true,
+    "model_risk_validated": false
+  }
+}

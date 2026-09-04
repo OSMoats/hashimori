@@ -10,7 +10,15 @@ from hashimori.engine import evaluate
 from hashimori.loader import load_packs, validate_pack
 
 ROOT = Path(__file__).parent.parent
-PACKS = load_packs([ROOT / "rulepacks"])
+# Scoped to baseline + red-zone deliberately, not the whole rulepacks/ dir:
+# industry packs (finance, healthcare, ...) bring their own tiers and their
+# own vocabulary namespace, and composing them here would both make
+# baseline's catch-all elevated_review tier shadow theirs, and report their
+# namespace's paths as unknown on every context that doesn't set them —
+# silently blocking auto-approval on unrelated examples. See
+# rulepacks/finance/README.md "Composition" for the full reasoning; each
+# industry pack gets its own test module scoped to itself + red-zone.
+PACKS = load_packs([ROOT / "rulepacks" / "baseline", ROOT / "rulepacks" / "red-zone"])
 
 
 def intake(name: str) -> dict:

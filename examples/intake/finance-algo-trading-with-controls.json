@@ -1,0 +1,42 @@
+{
+  "use_case": {
+    "name": "Intraday Equity Market-Making Strategy",
+    "description": "Autonomous market-making strategy for a liquid equity basket, quoting and hedging within pre-set limits.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["order_generation"],
+    "subjects": ["institutional_accounts"],
+    "affected_people": 60000
+  },
+  "data": {
+    "categories": ["transaction_data", "cardholder_data"]
+  },
+  "model": {
+    "provider": "new_quant_vendor",
+    "provider_approved": true,
+    "provider_assessed": false,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": true,
+    "irreversible_effects": true,
+    "approval_gate": true,
+    "rollback_plan": true
+  },
+  "observability": {
+    "logging": true
+  },
+  "finance": {
+    "decision_type": "algorithmic_trading",
+    "kill_switch": true,
+    "pre_trade_risk_controls": true,
+    "model_risk_validated": true,
+    "third_party_data_agreement_signed": true,
+    "pci_scope_assessed": true,
+    "cross_border_data_transfer": false,
+    "moves_funds": true
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "use_case": {
+    "name": "Spend Categorization Helper",
+    "description": "Tags transactions with a spend category for the budgeting view."
+  },
+  "data": {
+    "categories": ["transaction_data"]
+  },
+  "model": {
+    "provider": "new_budgeting_vendor",
+    "provider_approved": true
+  }
+}
