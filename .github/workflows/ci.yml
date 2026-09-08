@@ -20,7 +20,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
       - name: Unit tests
-        run: pytest -q
+        run: pytest -q --cov=hashimori --cov-report=term-missing
       - name: Rule packs validate
         run: hashimori validate rulepacks/
       - name: Policy decision tests
