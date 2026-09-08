@@ -10,12 +10,15 @@ from hashimori.engine import evaluate
 from hashimori.loader import load_packs, validate_pack
 
 ROOT = Path(__file__).parent.parent
-# Scoped to baseline + red-zone deliberately, not the whole rulepacks/ dir:
-# industry packs (finance, healthcare, ...) bring their own tiers and their
-# own vocabulary namespace, and composing them here would both make
-# baseline's catch-all elevated_review tier shadow theirs, and report their
-# namespace's paths as unknown on every context that doesn't set them —
-# silently blocking auto-approval on unrelated examples. See
+# Scoped to baseline + red-zone deliberately, not the whole rulepacks/ dir.
+# `rulepacks/` is rglob'd recursively by load_packs, so loading the whole
+# directory here would also sweep in every industry-specific pack (finance,
+# healthcare, ...) — each of which brings its own tiers and its own
+# vocabulary namespace. Composing them here would make baseline's catch-all
+# elevated_review tier shadow theirs (tiers concatenate rather than merge
+# across packs), and would report their namespace's paths as unknown on
+# every context that doesn't set them — silently blocking auto-approval on
+# these unrelated examples. See rulepacks/healthcare/README.md or
 # rulepacks/finance/README.md "Composition" for the full reasoning; each
 # industry pack gets its own test module scoped to itself + red-zone.
 PACKS = load_packs([ROOT / "rulepacks" / "baseline", ROOT / "rulepacks" / "red-zone"])
@@ -59,6 +62,25 @@ def test_decided_groups_prune_unknowns():
 def test_exists_operator():
     assert evaluate_condition({"path": "a", "exists": True}, {"a": 1}).is_true
     assert evaluate_condition({"path": "b", "exists": False}, {"a": 1}).is_true
+
+
+def test_in_and_not_in_reject_a_bare_string_instead_of_a_list():
+    # A pack author writing `in: credit` instead of `in: [credit]` used to be
+    # silently interpreted as "credit" in list("credit") -- checked one
+    # character at a time, which a real value almost never matches. That
+    # turned a rule meant to fire into one that silently never does, with no
+    # error anywhere: `hashimori validate` catches this typo, but
+    # `hashimori evaluate` -- what actually runs in production -- did not,
+    # so a red zone written to deny a real case would come back APPROVED.
+    # `in`/`not_in` now fail loudly instead of silently misevaluating.
+    with pytest.raises(ValueError, match="expects a list"):
+        evaluate_condition({"path": "x", "in": "credit"}, {"x": "credit"})
+    with pytest.raises(ValueError, match="expects a list"):
+        evaluate_condition({"path": "x", "not_in": "ab"}, {"x": "z"})
+
+    # correctly bracketed still behaves exactly as before
+    assert evaluate_condition({"path": "x", "in": ["credit"]}, {"x": "credit"}).value is True
+    assert evaluate_condition({"path": "x", "not_in": ["a", "b"]}, {"x": "z"}).value is True
 
 
 # ---------------------------------------------------------------------------
