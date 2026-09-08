@@ -1,0 +1,190 @@
+version: 1
+pack:
+  name: finance
+  description: >
+    Financial-services graduated governance — red zones and risk factors for
+    the AI patterns most enterprise financial-services policies single out:
+    credit and underwriting decisions, AML/sanctions screening, algorithmic
+    trading, retail investment advice, and third-party handling of cardholder
+    or account data. Composes with rulepacks/red-zone (the universal "never"
+    list); do not load alongside rulepacks/baseline — see README.md.
+
+red_zones:
+  - id: FIN-RZ-001
+    name: Adverse credit or underwriting decision with no explainable reason
+    when:
+      all:
+        - path: finance.decision_type
+          in: [credit_decisioning, underwriting]
+        - path: finance.adverse_action_explainable
+          is: false
+    message: >
+      A human reviewing the model's output is not sufficient on its own for
+      credit or underwriting decisions. The system must also be able to
+      produce the specific, individualized reason a regulator or applicant
+      can be told when the decision goes against them.
+    remedy: >
+      Add a path from the model's output to a specific adverse-action reason
+      (not a generic score band), then resubmit.
+    refs: [ECOA:Reg-B, FCRA, EU-AI-Act:Annex-III]
+
+  - id: FIN-RZ-002
+    name: AML or sanctions alerts auto-dismissed with no analyst disposition
+    when:
+      all:
+        - path: finance.decision_type
+          is: aml_screening
+        - path: finance.auto_dismiss_alerts
+          is: true
+    message: >
+      A model may triage and prioritize alerts, but it may not close a
+      sanctions or AML alert as a false positive on its own. A trained
+      analyst dispositions every hit.
+    remedy: >
+      Route model output to an analyst queue for disposition; keep the model
+      to prioritization and summarization, then resubmit.
+    refs: [BSA-AML, FinCEN-SAR, NIST-AI-RMF:MANAGE-2.2]
+
+  - id: FIN-RZ-003
+    name: Algorithmic trading without a kill switch and pre-trade risk controls
+    when:
+      all:
+        - path: finance.decision_type
+          is: algorithmic_trading
+        - any:
+            - path: finance.kill_switch
+              is: false
+            - path: finance.pre_trade_risk_controls
+              is: false
+    message: >
+      A strategy that can send orders needs both a human-operable kill switch
+      and pre-trade risk controls (position and notional limits, fat-finger
+      checks) before it runs unattended. Neither is optional.
+    remedy: >
+      Wire in a kill switch and pre-trade risk controls, and evidence both
+      were tested, then resubmit.
+    refs: [SEC:Rule-15c3-5, NIST-AI-RMF:MANAGE-2.3]
+
+  - id: FIN-RZ-004
+    name: Retail investment advice with no suitability disclosure or advisor oversight
+    when:
+      all:
+        - path: finance.decision_type
+          is: robo_advice
+        - any:
+            - path: finance.suitability_disclosure_shown
+              is: false
+            - path: finance.licensed_advisor_review
+              is: false
+    message: >
+      Automated investment advice to retail customers requires the
+      suitability/best-interest disclosure the customer sees and a licensed
+      advisor in the oversight chain. Neither is optional for retail advice.
+    remedy: >
+      Add the suitability disclosure to the customer-facing flow and put a
+      licensed advisor in the review chain, then resubmit.
+    refs: [FINRA:Reg-BI, SEC:Investment-Advisers-Act]
+
+  - id: FIN-RZ-005
+    name: Cardholder or account data sent to an AI vendor with no data agreement
+    when:
+      all:
+        - path: data.categories
+          contains: cardholder_data
+        - any:
+            - path: finance.third_party_data_agreement_signed
+              is: false
+            - path: finance.pci_scope_assessed
+              is: false
+    message: >
+      Cardholder or financial-account data may not leave the organization's
+      boundary to an AI vendor without a signed data-processing agreement
+      covering that vendor and a PCI DSS scope assessment of the resulting
+      data flow.
+    remedy: >
+      Get the data-processing agreement signed and the PCI scope assessment
+      done (or keep cardholder data out of the model's inputs), then resubmit.
+    refs: [PCI-DSS:Req-12.8, DORA:Art.28, SOC2:CC9.2]
+
+  - id: FIN-RZ-006
+    name: Regulated financial decision model with no independent model-risk validation
+    when:
+      all:
+        - path: finance.decision_type
+          in: [credit_decisioning, underwriting, algorithmic_trading]
+        - path: finance.model_risk_validated
+          is: false
+    message: >
+      Models that drive credit, underwriting, or trading decisions need
+      independent validation (not just testing by the team that built the
+      model) before they touch a real decision.
+    remedy: >
+      Complete independent model validation — performance, stability, and
+      bias testing, signed off by someone outside the build team — then
+      resubmit.
+    refs: [SR-11-7, OCC-2011-12, APRA:CPS230]
+
+risk_factors:
+  - id: FIN-RISK-001
+    name: Customer- or public-facing financial decisioning or advice
+    when: {path: use_case.audience, in: [external, public, customers]}
+    weight: 2
+    refs: [NIST-AI-RMF:MAP-1.1]
+
+  - id: FIN-RISK-002
+    name: Handles cardholder or financial account data
+    when: {path: data.categories, contains: cardholder_data}
+    weight: 3
+    refs: [PCI-DSS:Req-3]
+
+  - id: FIN-RISK-003
+    name: Handles credit report or consumer reporting data
+    when: {path: data.categories, contains: credit_report_data}
+    weight: 3
+    refs: [FCRA]
+
+  - id: FIN-RISK-004
+    name: New or unassessed AI vendor acting as a critical ICT third party
+    when: {path: model.provider_assessed, is: false}
+    weight: 3
+    refs: [DORA:Art.28]
+
+  - id: FIN-RISK-005
+    name: Cross-border data transfer or multi-jurisdiction deployment
+    when: {path: finance.cross_border_data_transfer, is: true}
+    weight: 2
+    refs: [APRA:CPS234]
+
+  - id: FIN-RISK-006
+    name: Large blast radius (50k+ customers or accounts affected)
+    when: {path: use_case.affected_people, gte: 50000}
+    weight: 2
+
+  - id: FIN-RISK-007
+    name: Initiates or moves customer funds autonomously
+    when: {path: finance.moves_funds, is: true}
+    weight: 4
+    refs: [NIST-AI-RMF:MANAGE-2.3]
+
+  - id: FIN-RISK-008
+    name: No output logging or audit trail planned
+    when: {path: observability.logging, is: false}
+    weight: 3
+    refs: [SOC2:CC7.2, ISO-42001:A.6.2.8]
+
+tiers:
+  - name: fast_track
+    max_score: 2
+    outcome: approved
+    obligations: [enable_logging, register_in_ai_inventory, quarterly_review]
+
+  - name: standard_review
+    max_score: 6
+    outcome: needs_review
+    reviewers: [security, compliance]
+    sla_days: 5
+
+  - name: elevated_review
+    outcome: needs_review
+    reviewers: [security, compliance, legal, model_risk_committee]
+    sla_days: 10

@@ -1,0 +1,36 @@
+{
+  "use_case": {
+    "name": "AI-Assisted Underwriting Pre-Screen",
+    "description": "Scores incoming applications and hands the underwriter a recommendation with the individualized reason codes; the underwriter makes the final call.",
+    "audience": "external",
+    "decision_impact": "credit",
+    "capabilities": ["underwriting_support"],
+    "subjects": ["customers"],
+    "affected_people": 20000
+  },
+  "data": {
+    "categories": ["personal_data", "credit_report_data"]
+  },
+  "model": {
+    "provider": "approved_fintech_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": true
+  },
+  "finance": {
+    "decision_type": "underwriting",
+    "adverse_action_explainable": true,
+    "model_risk_validated": true,
+    "cross_border_data_transfer": false,
+    "moves_funds": false
+  }
+}

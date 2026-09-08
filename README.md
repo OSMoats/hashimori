@@ -116,7 +116,7 @@ Rule packs ship with decision tests, and CI fails when a policy change flips
 a decision you didn't mean to flip:
 
 ```bash
-hashimori test examples/tests/decisions.yaml --rules rulepacks/
+hashimori test examples/tests/decisions.yaml --rules rulepacks/baseline rulepacks/red-zone
 ```
 
 ```text
@@ -150,6 +150,13 @@ how to extend the vocabulary for a specific domain (FDA SaMD clearance,
 HIPAA BAAs, 42 CFR Part 2 consent) and compose it correctly alongside the
 red-zone pack.
 
+Industry packs layer on top of [`red-zone`](rulepacks/red-zone/) instead of
+`baseline` and bring their own vocabulary — see
+[`rulepacks/finance`](rulepacks/finance/) for credit/underwriting, AML,
+algorithmic trading, robo-advice, and third-party cardholder-data patterns:
+six red zones and eight risk factors mapped to `DORA`, `APRA:CPS230`/`CPS234`,
+`PCI-DSS`, `ECOA`/`Reg B`, `FCRA`, `SR-11-7`, `SEC`, and `FINRA`.
+
 ## What Hashimori is not
 
 - **Not a GRC platform.** It's the ~600-line decision core that platforms
@@ -181,3 +188,6 @@ the most valuable contributions — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 [MIT](LICENSE). Built by Aakash Yadav and contributors, in a personal
 capacity. First presented at AI TechWorld 2026.
+
+The [financial-services rule pack](rulepacks/finance/) was built by
+[Tushar Badlani](https://tusharbadlani.studio/), in a personal capacity.

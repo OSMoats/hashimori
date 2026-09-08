@@ -10,16 +10,17 @@ from hashimori.engine import evaluate
 from hashimori.loader import load_packs, validate_pack
 
 ROOT = Path(__file__).parent.parent
-# Pinned to the two packs this suite was written for. `rulepacks/` is
-# rglob'd recursively by load_packs, so loading the whole directory here
-# would also sweep in any industry-specific pack added later (e.g.
-# rulepacks/healthcare/) — and composing a pack with unrelated vocabulary
-# breaks the assertions below: new unresolved paths leak into
-# unknown_paths for these shipped examples (the engine fails closed on
-# anything it can't decide), and tiers concatenate rather than merge
-# across packs, so an appended pack's own tier ladder is never reached.
-# See rulepacks/healthcare/README.md for a worked example of composing
-# packs safely.
+# Scoped to baseline + red-zone deliberately, not the whole rulepacks/ dir.
+# `rulepacks/` is rglob'd recursively by load_packs, so loading the whole
+# directory here would also sweep in every industry-specific pack (finance,
+# healthcare, ...) — each of which brings its own tiers and its own
+# vocabulary namespace. Composing them here would make baseline's catch-all
+# elevated_review tier shadow theirs (tiers concatenate rather than merge
+# across packs), and would report their namespace's paths as unknown on
+# every context that doesn't set them — silently blocking auto-approval on
+# these unrelated examples. See rulepacks/healthcare/README.md or
+# rulepacks/finance/README.md "Composition" for the full reasoning; each
+# industry pack gets its own test module scoped to itself + red-zone.
 PACKS = load_packs([ROOT / "rulepacks" / "baseline", ROOT / "rulepacks" / "red-zone"])
 
 

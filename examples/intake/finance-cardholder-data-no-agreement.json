@@ -1,0 +1,34 @@
+{
+  "use_case": {
+    "name": "Disputed-Charge Summarization Assistant",
+    "description": "Summarizes cardholder dispute cases via a third-party generative AI API to speed up analyst review.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["text_summarization"],
+    "subjects": ["customers"],
+    "affected_people": 10000
+  },
+  "data": {
+    "categories": ["cardholder_data"]
+  },
+  "model": {
+    "provider": "new_generative_api_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": true
+  },
+  "finance": {
+    "decision_type": "fraud_detection",
+    "third_party_data_agreement_signed": false,
+    "pci_scope_assessed": true
+  }
+}
