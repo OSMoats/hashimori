@@ -24,4 +24,6 @@ jobs:
       - name: Rule packs validate
         run: hashimori validate rulepacks/
       - name: Policy decision tests
-        run: hashimori test examples/tests/decisions.yaml --rules rulepacks/
+        run: hashimori test examples/tests/decisions.yaml --rules rulepacks/baseline rulepacks/red-zone
+      - name: Healthcare pack decision tests
+        run: hashimori test examples/tests/healthcare-decisions.yaml --rules rulepacks/red-zone rulepacks/healthcare
