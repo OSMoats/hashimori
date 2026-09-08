@@ -144,7 +144,11 @@ hashimori init governance/        # rules + intake template + tests, ready to ed
 or point the `policy-to-rules` skill at the PDF you already have. The shipped
 [rulepacks](rulepacks/) encode the "never" list and graduated-review shape
 most enterprise AI policies share — edit the vocabulary and weights to match
-yours. (They're engineering starting points, not legal advice.)
+yours. (They're engineering starting points, not legal advice.) A worked
+industry example — [`rulepacks/healthcare`](rulepacks/healthcare/) — shows
+how to extend the vocabulary for a specific domain (FDA SaMD clearance,
+HIPAA BAAs, 42 CFR Part 2 consent) and compose it correctly alongside the
+red-zone pack.
 
 ## What Hashimori is not
 

@@ -1,0 +1,36 @@
+{
+  "use_case": {
+    "name": "ED Waiting Room Triage Acuity Bot",
+    "description": "Assigns an initial acuity score to patients checking into the ED waiting room and reorders the queue.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["triage_scoring"],
+    "subjects": ["patients"],
+    "affected_people": 25000
+  },
+  "data": {
+    "categories": ["phi"]
+  },
+  "model": {
+    "provider": "new_er_startup_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false,
+    "baa_signed": true
+  },
+  "oversight": {
+    "human_in_loop": false
+  },
+  "agent": {
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": true
+  },
+  "clinical": {
+    "decision_support_type": "triage",
+    "samd_classification_required": true,
+    "fda_cleared": false,
+    "fallback_to_standard_triage": false
+  }
+}
