@@ -14,14 +14,16 @@ jobs:
       matrix:
         python-version: ["3.9", "3.12"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
       - name: Unit tests
-        run: pytest -q
+        run: pytest -q --cov=hashimori --cov-report=term-missing
       - name: Rule packs validate
         run: hashimori validate rulepacks/
       - name: Policy decision tests
-        run: hashimori test examples/tests/decisions.yaml --rules rulepacks/
+        run: hashimori test examples/tests/decisions.yaml --rules rulepacks/baseline rulepacks/red-zone
+      - name: Healthcare pack decision tests
+        run: hashimori test examples/tests/healthcare-decisions.yaml --rules rulepacks/red-zone rulepacks/healthcare

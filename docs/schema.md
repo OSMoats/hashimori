@@ -16,6 +16,18 @@ Packs compose: point the engine at a directory and every `*.yaml` in it loads.
 Red zones from all packs are checked before any scoring. This is how you keep
 a company-wide `red-zone.yaml` alongside per-department baselines.
 
+**Loading more than one pack with `tiers:`, on the other hand, is not
+"merged" scoring.** `tiers` from every loaded pack are concatenated into one
+list, and the engine stops at the first tier whose `max_score` isn't
+exceeded — it does not namespace or reconcile ladders per pack. If pack A's
+catch-all tier (no `max_score`) sorts ahead of pack B's ladder, B's tiers
+are simply never reached — and if the two catch-all tiers happen to share a
+`name`, the failure is silent: the decision reports the right-looking tier
+name with the wrong pack's reviewers and obligations underneath it. Load at
+most one tiered pack per run (pairing it with red-zone-only packs is fine,
+since those never define `tiers`); see `rulepacks/healthcare/README.md` for
+a verified example of the failure mode and how to compose around it.
+
 ## Red zones
 
 ```yaml
