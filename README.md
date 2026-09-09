@@ -42,7 +42,7 @@ pipx run --spec git+https://github.com/OSMoats/hashimori hashimori evaluate --ru
 ```
 
 ```text
-  🌉 hashimori v0.1.0   →   DENIED
+  🌉 hashimori v0.2.0   →   DENIED
 
   ⛔ RED ZONE — evaluation short-circuited. No review queue. No committee.
      REDZONE-001  Consequential decisions with no human in the loop  [red-zone]
