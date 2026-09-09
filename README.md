@@ -182,7 +182,7 @@ here's how to tell which one you actually need in about thirty seconds.
 | A decision is | A pure function of (packs, context) — reproducible, SHA-256 hashed | A pure function of (policy, input) — reproducible | Usually workflow-driven (tickets, approvals) — not a deterministic function |
 | Rule packs ship with tests | Yes, first-class (`hashimori test`) | Yes, via `opa test` | Rarely a concept at all |
 | Broader compliance surface (vendor risk, evidence collection, training tracking, cross-framework audit mapping) | No — deliberately out of scope | No | Yes — this is the point of a GRC platform |
-| Ecosystem maturity (sidecars, admission control, bundles, decision logs at scale) | No — small and young | Yes — mature, used far beyond AI (Kubernetes, API authz, infra-as-code) | Yes — mature, enterprise-grade |
+| Ecosystem maturity (sidecars, admission control, bundles, decision logs at scale) | Still small and young | Yes — mature, used far beyond AI (Kubernetes, API authz, infra-as-code) | Yes — mature, enterprise-grade |
 | Generates/red-teams rule packs from a policy doc via AI | Yes (`policy-to-rules`, `rule-redteam` skills) | No | No |
 | Cost / license | Free, MIT | Free, Apache 2.0 | Usually paid, often enterprise-priced |
 
