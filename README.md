@@ -32,13 +32,13 @@ No install, no clone — paste this:
 ```bash
 curl -sL https://raw.githubusercontent.com/OSMoats/hashimori/main/rulepacks/red-zone/red-zone.yaml -o red-zone.yaml
 curl -sL https://raw.githubusercontent.com/OSMoats/hashimori/main/examples/intake/loan-agent.json -o loan-agent.json
-uvx --from git+https://github.com/OSMoats/hashimori hashimori evaluate --rules red-zone.yaml --context loan-agent.json
+uvx hashimori evaluate --rules red-zone.yaml --context loan-agent.json
 ```
 
 No [`uv`](https://docs.astral.sh/uv/)? `pipx run` does the same thing:
 
 ```bash
-pipx run --spec git+https://github.com/OSMoats/hashimori hashimori evaluate --rules red-zone.yaml --context loan-agent.json
+pipx run hashimori evaluate --rules red-zone.yaml --context loan-agent.json
 ```
 
 ```text
@@ -64,8 +64,8 @@ That rejection took milliseconds, cited two exact rules, told the team how to
 fix each one, and left a reproducible audit record — and nothing was
 installed on your machine. Nobody scheduled a meeting.
 
-Want it around for good? `pip install git+https://github.com/OSMoats/hashimori`,
-or `git clone` the repo to explore the rule packs, skills, and tests directly.
+Want it around for good? `pip install hashimori`, or `git clone` the repo to
+explore the rule packs, skills, and tests directly.
 
 ## How it works
 
