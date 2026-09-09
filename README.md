@@ -27,18 +27,20 @@ the five cases that deserve it instead of the fifty that don't.
 
 ## Sixty seconds
 
-No install, no clone — paste this:
-
 ```bash
+pip install hashimori
 curl -sL https://raw.githubusercontent.com/OSMoats/hashimori/main/rulepacks/red-zone/red-zone.yaml -o red-zone.yaml
 curl -sL https://raw.githubusercontent.com/OSMoats/hashimori/main/examples/intake/loan-agent.json -o loan-agent.json
-uvx hashimori evaluate --rules red-zone.yaml --context loan-agent.json
+
+hashimori evaluate --rules red-zone.yaml --context loan-agent.json
 ```
 
-No [`uv`](https://docs.astral.sh/uv/)? `pipx run` does the same thing:
+Don't even want to install it? [`uvx`](https://docs.astral.sh/uv/) or
+`pipx run` do the same thing with nothing left behind afterward:
 
 ```bash
-pipx run hashimori evaluate --rules red-zone.yaml --context loan-agent.json
+uvx hashimori evaluate --rules red-zone.yaml --context loan-agent.json
+# or: pipx run hashimori evaluate --rules red-zone.yaml --context loan-agent.json
 ```
 
 ```text
@@ -61,11 +63,11 @@ pipx run hashimori evaluate --rules red-zone.yaml --context loan-agent.json
 ```
 
 That rejection took milliseconds, cited two exact rules, told the team how to
-fix each one, and left a reproducible audit record — and nothing was
-installed on your machine. Nobody scheduled a meeting.
+fix each one, and left a reproducible audit record. Nobody scheduled a
+meeting.
 
-Want it around for good? `pip install hashimori`, or `git clone` the repo to
-explore the rule packs, skills, and tests directly.
+Want to explore the rule packs, skills, and tests directly? `git clone` the
+repo.
 
 ## How it works
 
