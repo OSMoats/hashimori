@@ -168,6 +168,31 @@ six red zones and eight risk factors mapped to `DORA`, `APRA:CPS230`/`CPS234`,
   anywhere Python runs, exports plain JSON. Fork it and make it yours —
   that's the point.
 
+## Hashimori vs. OPA vs. a GRC platform
+
+Three different tools that get compared because they all touch "policy" —
+here's how to tell which one you actually need in about thirty seconds.
+
+| | **Hashimori** | **OPA / Rego** | **Generic GRC platform** (Vanta, OneTrust, Credo AI, ...) |
+|---|---|---|---|
+| Purpose-built for AI use-case governance | Yes — `red_zones`, `risk_factors`, `tiers`, `reviewers`, `remedy` are AI-governance-shaped out of the box | No — general-purpose policy engine; you build this vocabulary yourself in Rego | Partial — usually an "AI governance" module bolted onto a much broader compliance product |
+| Policy language | A small YAML condition tree (leaf + `all`/`any`/`none`) | Rego — a full declarative logic language, far more expressive, far steeper learning curve | Usually a proprietary rules/form builder, not a language |
+| Where policy lives | A YAML file in your own git repo | A `.rego` file in your own git repo | A vendor's hosted UI — not yours, not in your git history |
+| Core you can actually read | ~600 lines, one engineer, one afternoon | The OPA runtime — mature, but nobody reads it end to end before trusting it | Closed source |
+| A decision is | A pure function of (packs, context) — reproducible, SHA-256 hashed | A pure function of (policy, input) — reproducible | Usually workflow-driven (tickets, approvals) — not a deterministic function |
+| Rule packs ship with tests | Yes, first-class (`hashimori test`) | Yes, via `opa test` | Rarely a concept at all |
+| Broader compliance surface (vendor risk, evidence collection, training tracking, cross-framework audit mapping) | No — deliberately out of scope | No | Yes — this is the point of a GRC platform |
+| Ecosystem maturity (sidecars, admission control, bundles, decision logs at scale) | Still small and young | Yes — mature, used far beyond AI (Kubernetes, API authz, infra-as-code) | Yes — mature, enterprise-grade |
+| Generates/red-teams rule packs from a policy doc via AI | Yes (`policy-to-rules`, `rule-redteam` skills) | No | No |
+| Cost / license | Free, MIT | Free, Apache 2.0 | Usually paid, often enterprise-priced |
+
+Need general-purpose policy enforcement across many systems, not just AI
+intake? Use OPA — it's more powerful and more mature. Need a single system
+of record for your whole compliance program — vendor risk, evidence,
+audits? Use a GRC platform. Need the specific "should we approve this AI
+use case" decision, in code, reviewable by one engineer, with an audit
+trail two years from now? That's what Hashimori is for.
+
 ## Design principles
 
 1. **Deterministic core, intelligent edges.** Auditability is a feature you
