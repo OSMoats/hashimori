@@ -1,0 +1,81 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  # Reuses ci.yml's own test job (via workflow_call) as the pre-publish gate,
+  # instead of a second copy of the same steps that could drift out of sync.
+  # Runs the full 3.9/3.12 matrix, same as every push and PR.
+  test:
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    name: Build distribution
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Verify the release tag matches pyproject.toml's version
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "release tag: $GITHUB_REF_NAME  ->  $TAG"
+          echo "pyproject.toml version: $PKG_VERSION"
+          if [ "$TAG" != "$PKG_VERSION" ]; then
+            echo "::error::Release tag '$GITHUB_REF_NAME' doesn't match pyproject.toml's version '$PKG_VERSION'. Bump pyproject.toml to $TAG (or re-tag to match $PKG_VERSION), then re-publish the release."
+            exit 1
+          fi
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          twine check dist/*
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # Must be named exactly "pypi" -- this has to match the environment name
+    # given when registering the trusted publisher on pypi.org. See
+    # docs/releasing.md for the one-time setup this depends on.
+    environment:
+      name: pypi
+      url: https://pypi.org/p/hashimori
+    permissions:
+      id-token: write # required for Trusted Publishing (OIDC) -- no API token, ever
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2

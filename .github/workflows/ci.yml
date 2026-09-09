@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call: # lets release.yml reuse this exact test job as its pre-publish gate
 
 permissions:
   contents: read
