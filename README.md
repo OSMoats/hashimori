@@ -27,11 +27,18 @@ the five cases that deserve it instead of the fifty that don't.
 
 ## Sixty seconds
 
-```bash
-pip install git+https://github.com/OSMoats/hashimori
-git clone https://github.com/OSMoats/hashimori && cd hashimori
+No install, no clone — paste this:
 
-hashimori evaluate --rules rulepacks/ --context examples/intake/loan-agent.json
+```bash
+curl -sL https://raw.githubusercontent.com/OSMoats/hashimori/main/rulepacks/red-zone/red-zone.yaml -o red-zone.yaml
+curl -sL https://raw.githubusercontent.com/OSMoats/hashimori/main/examples/intake/loan-agent.json -o loan-agent.json
+uvx --from git+https://github.com/OSMoats/hashimori hashimori evaluate --rules red-zone.yaml --context loan-agent.json
+```
+
+No [`uv`](https://docs.astral.sh/uv/)? `pipx run` does the same thing:
+
+```bash
+pipx run --spec git+https://github.com/OSMoats/hashimori hashimori evaluate --rules red-zone.yaml --context loan-agent.json
 ```
 
 ```text
@@ -42,13 +49,23 @@ hashimori evaluate --rules rulepacks/ --context examples/intake/loan-agent.json
        Fully automated decisions that materially affect a person's access to
        credit, work, housing, care, or justice are categorically prohibited.
        ↳ path to yes: Put a qualified human between the model output and the
-         decision taking effect, then resubmit.
+         decision taking effect (review-and-approve, not review-after-the-fact),
+         then resubmit.
+     REDZONE-005  Irreversible autonomous actions without a gate or rollback  [red-zone]
+       Agents that move money, delete data, or change production systems must
+       have an approval gate AND a rollback plan before they run unattended.
+       ↳ path to yes: Add an approval gate for irreversible actions and a
+         tested rollback plan, then resubmit.
 
-  audit: context 4e84afea7ff2… · 2 pack(s) hashed · 2026-09-03T03:13:30Z
+  audit: context 4e84afea7ff2… · 1 pack(s) hashed · 2026-09-09T00:16:08Z
 ```
 
-That rejection took 40 milliseconds, cited the exact rule, told the team how
-to fix it, and left a reproducible audit record. Nobody scheduled a meeting.
+That rejection took milliseconds, cited two exact rules, told the team how to
+fix each one, and left a reproducible audit record — and nothing was
+installed on your machine. Nobody scheduled a meeting.
+
+Want it around for good? `pip install git+https://github.com/OSMoats/hashimori`,
+or `git clone` the repo to explore the rule packs, skills, and tests directly.
 
 ## How it works
 
