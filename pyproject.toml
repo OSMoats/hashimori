@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hashimori"
-version = "0.1.0"
+version = "0.2.0"
 description = "橋守 — a tiny, deterministic rules engine for AI use case governance. Policy in YAML, intake in JSON, decision in milliseconds, with an audit trail."
 readme = "README.md"
 license = { text = "MIT" }
