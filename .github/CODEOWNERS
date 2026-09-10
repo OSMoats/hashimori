@@ -1,5 +1,5 @@
-# Default reviewer for anything not covered by a more specific rule below.
-* @MoatsSmith
+# Default reviewers for anything not covered by a more specific rule below.
+* @MoatsSmith @bansalfx
 
 # Industry rule packs are reviewed by the person who built and maintains them.
 /rulepacks/finance/ @tkbad
