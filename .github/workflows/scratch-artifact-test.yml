@@ -1,0 +1,48 @@
+name: Scratch - artifact version check (delete after use)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  produce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build a dist/ directory matching what release.yml uploads
+        run: |
+          mkdir -p dist
+          echo "sdist-content-$(date +%s)" > dist/hashimori-0.2.0.tar.gz
+          echo "wheel-content-$(date +%s)" > dist/hashimori-0.2.0-py3-none-any.whl
+          sha256sum dist/* > dist-checksums.txt
+          cat dist-checksums.txt
+      - name: Upload with the version PR #16 proposes
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checksums
+          path: dist-checksums.txt
+
+  consume:
+    needs: produce
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download with the version PR #15 proposes
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/download-artifact@v4
+        with:
+          name: checksums
+      - name: Verify the round-tripped files match their original checksums exactly
+        run: |
+          echo "Downloaded files:"
+          ls -la dist/
+          echo
+          echo "Verifying against original checksums:"
+          sha256sum -c dist-checksums.txt
