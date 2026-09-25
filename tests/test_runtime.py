@@ -357,3 +357,13 @@ def test_cursor_adapter_documented_payloads():
     p, ev = to_payload({"hook_event_name": "beforeMCPExecution", "conversation_id": "c1", "tool_name": "x",
                         "tool_input": "{}", "mcp_server_name": "acme", "workspace_roots": [WS]})
     assert to_output(gt.decide(p), ev)["permission"] == "ask"   # unregistered MCP tool → human
+
+
+def test_macos_temp_dirs_are_not_system_paths():
+    """Found on a real Mac: pytest/tempfile workspaces live under /var/folders (→ /private/var)."""
+    from hashimori.runtime.effects import classify_path
+    for ws in ("/var/folders/ab/xyz/T/proj", "/private/var/folders/ab/xyz/T/proj", "/tmp/proj", "/private/tmp/proj"):
+        _, tags, in_ws, _ = classify_path("build/out.js", ws)
+        assert "system" not in tags and in_ws, ws
+    for sysp in ("/etc/hosts", "/private/etc/hosts", "/var/db/x", "/private/var/db/x", "/usr/local/bin/x"):
+        assert "system" in classify_path(sysp, "/Users/me/proj")[1], sysp

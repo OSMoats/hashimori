@@ -87,8 +87,15 @@ PATH_TAGS: list[tuple[str, list[str]]] = [
         "/var/spool/cron/**", "**/.ssh/authorized_keys",
         "~/Library/LaunchAgents/**", "/etc/cron*", "/etc/systemd/**",
     ]),
-    ("system", ["/etc/**", "/usr/**", "/bin/**", "/sbin/**", "/System/**", "/Library/**", "/var/**"]),
+    ("system", ["/etc/**", "/usr/**", "/bin/**", "/sbin/**", "/System/**", "/Library/**", "/var/**",
+                "/private/etc/**", "/private/var/**"]),  # macOS: /etc and /var are symlinks into /private
 ]
+
+# Per-user temp locations sit under /var on macOS (/var/folders/…/T, which resolves to
+# /private/var/folders) but are not system configuration. Agents often work there
+# (scratch dirs, worktrees, test sandboxes), so they don't get the "system" tag.
+SYSTEM_EXEMPT = ["/var/folders/**", "/private/var/folders/**", "/var/tmp/**", "/private/var/tmp/**",
+                 "/tmp/**", "/private/tmp/**"]
 
 TAG_SENSITIVITY = {"secret_store": RESTRICTED, "agent_config": CONFIDENTIAL,
                    "persistence": CONFIDENTIAL, "vcs_control": CONFIDENTIAL}
@@ -116,6 +123,8 @@ def classify_path(raw: str, cwd: str) -> tuple[str, list[str], bool | None, int]
         p = os.path.join(cwd or os.getcwd(), p)
     p = os.path.normpath(p)
     tags = [tag for tag, pats in PATH_TAGS if any(_glob_match(p, pat) for pat in pats)]
+    if "system" in tags and any(_glob_match(p, pat) for pat in SYSTEM_EXEMPT):
+        tags.remove("system")
     root = os.path.normpath(cwd) if cwd else None
     in_ws = (p == root or p.startswith(root + os.sep)) if root else None
     sens = max([TAG_SENSITIVITY.get(t, PUBLIC) for t in tags] + [INTERNAL if in_ws else PUBLIC])
