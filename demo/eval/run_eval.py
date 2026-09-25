@@ -138,7 +138,8 @@ def eval_nl2bash(rows, seed=7):
         "outcomes": dict(outcomes),
         "outcomes_pct": {k: pct(c, n) for k, c in outcomes.items()},
         "split": split,
-        "auto_decided_pct": pct(resolved, n),
+        "auto_decided_pct": pct(resolved, n),  # resolved by policy: everything except "couldn't tell"
+        "no_human_pct": pct(sum(1 for p in per_row if p["outcome"] in ("allow", "rewrite", "deny")), n),
         "deny_by_rule": dict(deny_ids.most_common()),
         "unknown_reasons": dict(unknown_tags.most_common()),
         "top_unrecognized_commands": unrec.most_common(25),
@@ -316,11 +317,12 @@ def report_md(summary) -> str:
     nb = summary.get("nl2bash")
     if nb:
         L += ["## NL2Bash — everyday commands (friction, coverage, latency)", "",
-              f"{nb['n']:,} real bash one-liners (jiacheng-ye/nl2bash). Each evaluated alone, fresh session, default policy.", "",
+              f"{nb['n']:,} real bash one-liners (NL2Bash corpus, Lin et al. 2018; source in MANIFEST). Each evaluated alone, fresh session, default policy.", "",
               "| Outcome | Count | % |", "|---|---:|---:|"]
         for k in ("allow", "rewrite", "ask_price", "ask_unknown", "deny"):
             L.append(f"| {k} | {nb['outcomes'].get(k, 0):,} | {nb['outcomes_pct'].get(k, 0)} |")
-        L += ["", f"Decided without a human (not 'unknown'): **{nb['auto_decided_pct']}%**", "",
+        L += ["", f"Resolved by policy (everything except 'couldn't tell'): **{nb['auto_decided_pct']}%** · "
+              f"no human needed (allowed, rewritten or denied): **{nb.get('no_human_pct')}%**", "",
               f"Latency per decision (in-process): p50 {nb['latency_ms']['p50']} ms · p95 {nb['latency_ms']['p95']} ms · p99 {nb['latency_ms']['p99']} ms", "",
               "Denials by rule: " + ", ".join(f"{k} {v}" for k, v in nb["deny_by_rule"].items()), "",
               "Top commands the shell adapter doesn't know: " + ", ".join(f"`{c}` {n}" for c, n in nb["top_unrecognized_commands"][:15]), "",

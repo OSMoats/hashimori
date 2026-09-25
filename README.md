@@ -204,7 +204,7 @@ Wire it into Claude Code (`.claude/settings.json`):
 | **Cursor too** | `python3 -m hashimori.runtime.cursor` behind Cursor's `beforeShellExecution` / `beforeMCPExecution` / `beforeReadFile` / `preToolUse` hooks ([adapters/cursor/hooks.json](adapters/cursor/hooks.json)). |
 
 **Measured on public datasets** ([demo/eval](demo/eval/)): 10,624 real shell one-liners
-(NL2Bash) — 82.9% decided without a human, p50 ≈ 1 ms per decision; RedCode-Exec
+(NL2Bash) — 77.2% needed no human (another 5.7% were priced as risky and asked), p50 ≈ 1 ms per decision; RedCode-Exec
 risky programs — 90% of Python and 98.9% of Bash *action* scenarios stopped
 (held-out: 66.7% and 96.7%); MBPP benign Python — 0 of 974 stopped. What it
 can't see is in the same report: read-only disclosures are recorded but allowed,

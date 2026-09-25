@@ -56,7 +56,7 @@ def chart_nl2bash(s):
         c = nb["outcomes"].get(k, 0)
         body.append(hbar(y, LABEL[k], c, mx, DEC[k], valtext=f"{c:,}  ·  {nb['outcomes_pct'].get(k, 0) or 0}%"))
         y += 84
-    tiles = [(f"{nb['auto_decided_pct']}%", "decided without a human"),
+    tiles = [(f"{nb['no_human_pct']}%", "no human needed"),
              (f"{nb['latency_ms']['p50']:.2f} ms", "median decision time"),
              (f"{nb['latency_ms']['p99']:.2f} ms", "99th percentile")]
     for i, (big, small) in enumerate(tiles):
