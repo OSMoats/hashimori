@@ -43,7 +43,7 @@ never open.
 - YAML is parsed only with PyYAML's safe loaders (`SafeLoader` /
   `CSafeLoader`); documents are hashed with SHA-256 for the audit record.
 
-**Runtime (0.2+).** `hashimori.runtime` wraps the pure engine with state and
+**Runtime (0.3+).** `hashimori.runtime` wraps the pure engine with state and
 I/O: a local SQLite ledger (session taint + risk budget), an append-only
 JSONL audit log, the Claude Code hook adapter, and an optional resident
 server bound to 127.0.0.1. Its guarantees:
