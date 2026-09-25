@@ -1,0 +1,27 @@
+# Healthcare rule pack — policy decision tests.
+# Run:  hashimori test examples/tests/healthcare-decisions.yaml --rules rulepacks/red-zone rulepacks/healthcare
+#
+# Deliberately never loaded with `rulepacks/baseline` — see
+# rulepacks/healthcare/README.md for why composing two tiered packs in one
+# run isn't safe with the current engine.
+
+tests:
+  - name: AI scribe with clinician attestation before filing routes to standard review
+    context_file: ../intake/healthcare-ambient-scribe.json
+    expect: {decision: NEEDS_REVIEW, tier: standard_review}
+
+  - name: FDA-cleared pediatric imaging AI, radiologist-reviewed, still needs the committee
+    context_file: ../intake/healthcare-diagnostic-imaging-ai.json
+    expect: {decision: NEEDS_REVIEW, tier: elevated_review}
+
+  - name: uncleared triage bot is denied even though it was not self-reported as a medical decision
+    context_file: ../intake/healthcare-uncleared-triage-bot.json
+    expect: {decision: DENIED, red_zones: [HC-RZ-001, HC-RZ-005]}
+
+  - name: PHI sent to a vendor with no BAA is denied
+    context_file: ../intake/healthcare-phi-no-baa.json
+    expect: {decision: DENIED, red_zones: [HC-RZ-002]}
+
+  - name: vague healthcare submission fails closed
+    context_file: ../intake/healthcare-vague-submission.json
+    expect: {decision: NEEDS_REVIEW}

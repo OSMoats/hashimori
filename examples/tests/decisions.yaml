@@ -1,5 +1,9 @@
 # Policy decision tests — your policy, tested like code.
-# Run:  hashimori test examples/tests/decisions.yaml --rules rulepacks/
+# Run:  hashimori test examples/tests/decisions.yaml --rules rulepacks/baseline rulepacks/red-zone
+#
+# Scoped to baseline + red-zone, not the whole rulepacks/ dir: industry packs
+# (rulepacks/finance, ...) bring their own tiers and vocabulary namespace and
+# are tested separately — see rulepacks/finance/README.md "Composition".
 
 tests:
   - name: internal docs answerbot fast-tracks

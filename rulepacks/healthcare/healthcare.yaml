@@ -1,0 +1,185 @@
+version: 1
+pack:
+  name: healthcare
+  description: >
+    Healthcare and clinical AI. The universal red-zone pack only catches
+    consequential decisions when a team honestly self-reports
+    `decision_impact: medical` — this pack catches healthcare-specific
+    patterns independent of that self-report: FDA software-as-a-medical-
+    device (SaMD) clearance for clinical decision support, a signed HIPAA
+    Business Associate Agreement before PHI reaches a model vendor, 42 CFR
+    Part 2 consent for substance-use records, and a clinician between
+    AI-drafted documentation and the medical record.
+
+    Load this alongside `red-zone`, never alongside `baseline` — this pack
+    ships its own tiers, and the engine concatenates (never merges) tiers
+    across every pack in a loaded set, stopping at the first match. Loading
+    `baseline` and `healthcare` together lets baseline's catch-all tier
+    shadow this pack's ladder. See README.md in this directory for the
+    vocabulary and a worked composition example.
+
+    Framework refs are informational mappings, not compliance claims —
+    calibrate with your own counsel and clinical safety team, same as the
+    shipped baseline and red-zone packs.
+
+red_zones:
+  - id: HC-RZ-001
+    name: Clinical decision support requiring FDA clearance, deployed uncleared and unattended
+    when:
+      all:
+        - path: clinical.decision_support_type
+          in: [diagnostic, treatment_recommendation, triage]
+        - path: clinical.samd_classification_required
+          is: true
+        - path: clinical.fda_cleared
+          is: false
+        - path: oversight.human_in_loop
+          is: false
+    message: >
+      Software your regulatory/quality function has classified as requiring
+      FDA clearance as a medical device (SaMD) may not make diagnostic,
+      treatment, or triage recommendations about real patients without both
+      clearance and a human in the loop.
+    remedy: >
+      Obtain FDA clearance or authorization for this use, or add a licensed
+      clinician who reviews and approves each recommendation before it
+      reaches a patient, then resubmit.
+    refs: [FDA:SaMD, NIST-AI-RMF:MANAGE-2.2]
+
+  - id: HC-RZ-002
+    name: PHI sent to a model vendor with no Business Associate Agreement
+    when:
+      all:
+        - path: data.categories
+          contains: phi
+        - path: model.baa_signed
+          is: false
+    message: >
+      Protected health information may not be sent to any AI or model
+      vendor without an executed Business Associate Agreement covering
+      that use — general vendor approval is not a substitute, and HIPAA
+      does not have an intake-form exception.
+    remedy: >
+      Execute a BAA with the vendor, or route the workload through a
+      provider you already hold one with (including a self-hosted model),
+      then resubmit.
+    refs: [HIPAA:BAA]
+
+  - id: HC-RZ-003
+    name: Substance use disorder records used without Part 2 consent
+    when:
+      all:
+        - path: data.categories
+          contains: substance_use_disorder_records
+        - path: data.part2_consent_obtained
+          is: false
+    message: >
+      Substance use disorder treatment records protected under 42 CFR
+      Part 2 may not feed an AI system on the strength of general HIPAA
+      consent — Part 2 requires its own, specific patient consent for this
+      disclosure.
+    remedy: >
+      Obtain Part 2-compliant consent naming this specific use, or exclude
+      Part 2 records from the data the system sees, then resubmit.
+    refs: [42-CFR-Part-2]
+
+  - id: HC-RZ-004
+    name: AI-drafted clinical documentation filed without clinician attestation
+    when:
+      all:
+        - path: clinical.ai_generated_documentation
+          is: true
+        - path: clinical.clinician_attestation_before_record
+          is: false
+    message: >
+      AI-drafted notes, orders, or after-visit summaries may not enter the
+      medical record until a clinician has reviewed and attested to them —
+      an ambient scribe or drafting tool is not a co-signer.
+    remedy: >
+      Add a mandatory clinician review-and-attest step before any
+      AI-drafted content is filed to the record, then resubmit.
+    refs: [NIST-AI-RMF:MANAGE-2.2]
+
+  - id: HC-RZ-005
+    name: AI triage with no fallback to standard-of-care protocol
+    when:
+      all:
+        - path: clinical.decision_support_type
+          is: triage
+        - path: clinical.fallback_to_standard_triage
+          is: false
+    message: >
+      AI-assisted patient triage or acuity scoring must never remove
+      staff's ability to fall back to the established, non-AI triage
+      protocol.
+    remedy: >
+      Preserve a standard-of-care triage path staff can invoke at any
+      time, independent of the AI system's availability or output, then
+      resubmit.
+    refs: [NIST-AI-RMF:MANAGE-2.3]
+
+risk_factors:
+  - id: HC-RISK-001
+    name: Handles protected health information
+    when: {path: data.categories, contains: phi}
+    weight: 3
+    refs: [HIPAA:Privacy-Rule]
+
+  - id: HC-RISK-002
+    name: Handles genetic or genomic data
+    when: {path: data.categories, contains: genetic_data}
+    weight: 4
+
+  - id: HC-RISK-003
+    name: Subjects include minors
+    when: {path: use_case.subjects, contains: minors}
+    weight: 3
+
+  - id: HC-RISK-004
+    name: Diagnostic or treatment-recommendation support, human-reviewed
+    when:
+      all:
+        - path: clinical.decision_support_type
+          in: [diagnostic, treatment_recommendation]
+        - path: oversight.human_in_loop
+          is: true
+    weight: 3
+    refs: [FDA:SaMD]
+
+  - id: HC-RISK-005
+    name: No clinical validation study completed
+    when: {path: clinical.validation_study_completed, is: false}
+    weight: 3
+
+  - id: HC-RISK-006
+    name: AI-generated documentation feeds the medical record
+    when: {path: clinical.ai_generated_documentation, is: true}
+    weight: 2
+
+  - id: HC-RISK-007
+    name: New or unassessed model provider handling clinical data
+    when:
+      all:
+        - path: data.categories
+          contains: phi
+        - path: model.provider_assessed
+          is: false
+    weight: 2
+    refs: [NIST-AI-RMF:GOVERN-6.1]
+
+tiers:
+  - name: fast_track
+    max_score: 2
+    outcome: approved
+    obligations: [enable_logging, register_in_ai_inventory, annual_review, privacy_impact_assessment]
+
+  - name: standard_review
+    max_score: 6
+    outcome: needs_review
+    reviewers: [security, privacy]
+    sla_days: 5
+
+  - name: elevated_review
+    outcome: needs_review
+    reviewers: [security, privacy, legal, clinical_safety_committee, ai_governance_board]
+    sla_days: 15

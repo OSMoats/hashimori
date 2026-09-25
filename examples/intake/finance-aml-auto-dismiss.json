@@ -1,0 +1,33 @@
+{
+  "use_case": {
+    "name": "Transaction Monitoring Alert Triage",
+    "description": "Scores AML alerts and automatically closes the ones it scores as low-risk without an analyst looking at them.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["alert_triage"],
+    "subjects": ["customers"],
+    "affected_people": 15000
+  },
+  "data": {
+    "categories": ["personal_data", "transaction_data"]
+  },
+  "model": {
+    "provider": "approved_fintech_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": true
+  },
+  "finance": {
+    "decision_type": "aml_screening",
+    "auto_dismiss_alerts": true
+  }
+}

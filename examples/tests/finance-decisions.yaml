@@ -1,0 +1,43 @@
+# Financial-services rule pack — policy decision tests.
+# Run: hashimori test examples/tests/finance-decisions.yaml --rules rulepacks/red-zone rulepacks/finance
+#
+# Deliberately never loaded with `rulepacks/baseline` — see
+# rulepacks/finance/README.md for why composing two tiered packs in one run
+# isn't safe with the current engine.
+
+tests:
+  - name: underwriting pre-screen with explainable reasons routes to standard review
+    context_file: ../intake/finance-credit-underwriting-standard.json
+    expect: {decision: NEEDS_REVIEW, tier: standard_review}
+
+  - name: market-making strategy with kill switch and controls still needs the model risk committee
+    context_file: ../intake/finance-algo-trading-with-controls.json
+    expect: {decision: NEEDS_REVIEW, tier: elevated_review}
+
+  - name: credit denial with no adverse-action explainability is denied even with a human reviewer
+    context_file: ../intake/finance-credit-denial-no-explainability.json
+    expect: {decision: DENIED, red_zones: [FIN-RZ-001]}
+
+  - name: AML alerts auto-dismissed with no analyst disposition is denied
+    context_file: ../intake/finance-aml-auto-dismiss.json
+    expect: {decision: DENIED, red_zones: [FIN-RZ-002]}
+
+  - name: trading strategy with no kill switch is denied
+    context_file: ../intake/finance-trading-no-kill-switch.json
+    expect: {decision: DENIED, red_zones: [FIN-RZ-003]}
+
+  - name: retail robo-advice with no suitability disclosure is denied
+    context_file: ../intake/finance-robo-advice-no-disclosure.json
+    expect: {decision: DENIED, red_zones: [FIN-RZ-004]}
+
+  - name: cardholder data sent to a vendor with no data agreement is denied
+    context_file: ../intake/finance-cardholder-data-no-agreement.json
+    expect: {decision: DENIED, red_zones: [FIN-RZ-005]}
+
+  - name: new credit model with no independent validation is denied
+    context_file: ../intake/finance-credit-no-model-validation.json
+    expect: {decision: DENIED, red_zones: [FIN-RZ-006]}
+
+  - name: vague finance submission fails closed, never approves
+    context_file: ../intake/finance-vague-submission.json
+    expect: {decision: NEEDS_REVIEW}

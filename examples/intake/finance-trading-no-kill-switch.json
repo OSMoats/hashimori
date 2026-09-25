@@ -1,0 +1,38 @@
+{
+  "use_case": {
+    "name": "Options Volatility Arbitrage Bot",
+    "description": "Autonomous strategy that sends orders based on volatility surface mispricing signals.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["order_generation"],
+    "subjects": ["institutional_accounts"],
+    "affected_people": 5000
+  },
+  "data": {
+    "categories": ["transaction_data"]
+  },
+  "model": {
+    "provider": "internal_quant_desk",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": true,
+    "irreversible_effects": true,
+    "approval_gate": true,
+    "rollback_plan": true
+  },
+  "observability": {
+    "logging": true
+  },
+  "finance": {
+    "decision_type": "algorithmic_trading",
+    "kill_switch": false,
+    "pre_trade_risk_controls": true,
+    "model_risk_validated": true
+  }
+}

@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.2.0 — additions during BSides prep
+## 0.3.0 — Runtime enforcement (BSides Orlando 2026)
+
+### Added during BSides prep
 
 - Script inspection: local scripts run by python/bash/sh (and their local imports) are
   lifted into effects before they run. Site-packages are not inspected (pinned gap).
@@ -13,7 +15,7 @@
 - Evaluation harness on NL2Bash, RedCode-Exec (Python + Bash) and MBPP with a blind
   baseline and held-out splits (`demo/eval`).
 
-## 0.2.0 — Runtime enforcement (BSides Orlando 2026)
+### Runtime enforcement
 
 - **New: `hashimori.runtime`** — enforce AI agent tool calls with the same engine
   and rule language used for design-time review.
@@ -30,3 +32,11 @@
 - **Engine:** `evaluate_rules()` and `select_tier()` exposed; pack hashes cached at
   load (full evaluation was spending ~99% of its time re-hashing packs); libyaml
   safe loader used when available.
+
+## 0.2.0 — first PyPI release (Sept 2026)
+
+- Published to PyPI via Trusted Publishing (OIDC); zero-install quickstart with `uvx` / `pipx`.
+- Healthcare/clinical and financial-services rule packs, with example intakes and decision tests.
+- Fix: silent rule bypass in `in` / `not_in` when the expected value isn't a list.
+- CLI hardened against malformed input; version read from package metadata.
+- CODEOWNERS, StepSecurity Harden Runner in CI, Dependabot action bumps.

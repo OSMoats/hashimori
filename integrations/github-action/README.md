@@ -38,7 +38,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
 
-      - run: pip install git+https://github.com/OSMoats/hashimori
+      - run: pip install hashimori
 
       - name: Evaluate changed intakes
         env:

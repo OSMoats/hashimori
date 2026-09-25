@@ -28,27 +28,46 @@ the five cases that deserve it instead of the fifty that don't.
 ## Sixty seconds
 
 ```bash
-pip install git+https://github.com/OSMoats/hashimori
-git clone https://github.com/OSMoats/hashimori && cd hashimori
+pip install hashimori
+curl -sL https://raw.githubusercontent.com/OSMoats/hashimori/main/rulepacks/red-zone/red-zone.yaml -o red-zone.yaml
+curl -sL https://raw.githubusercontent.com/OSMoats/hashimori/main/examples/intake/loan-agent.json -o loan-agent.json
 
-hashimori evaluate --rules rulepacks/ --context examples/intake/loan-agent.json
+hashimori evaluate --rules red-zone.yaml --context loan-agent.json
+```
+
+Don't even want to install it? [`uvx`](https://docs.astral.sh/uv/) or
+`pipx run` do the same thing with nothing left behind afterward:
+
+```bash
+uvx hashimori evaluate --rules red-zone.yaml --context loan-agent.json
+# or: pipx run hashimori evaluate --rules red-zone.yaml --context loan-agent.json
 ```
 
 ```text
-  🌉 hashimori v0.1.0   →   DENIED
+  🌉 hashimori v0.3.0   →   DENIED
 
   ⛔ RED ZONE — evaluation short-circuited. No review queue. No committee.
      REDZONE-001  Consequential decisions with no human in the loop  [red-zone]
        Fully automated decisions that materially affect a person's access to
        credit, work, housing, care, or justice are categorically prohibited.
        ↳ path to yes: Put a qualified human between the model output and the
-         decision taking effect, then resubmit.
+         decision taking effect (review-and-approve, not review-after-the-fact),
+         then resubmit.
+     REDZONE-005  Irreversible autonomous actions without a gate or rollback  [red-zone]
+       Agents that move money, delete data, or change production systems must
+       have an approval gate AND a rollback plan before they run unattended.
+       ↳ path to yes: Add an approval gate for irreversible actions and a
+         tested rollback plan, then resubmit.
 
-  audit: context 4e84afea7ff2… · 2 pack(s) hashed · 2026-09-03T03:13:30Z
+  audit: context 4e84afea7ff2… · 1 pack(s) hashed · 2026-09-09T00:16:08Z
 ```
 
-That rejection took 40 milliseconds, cited the exact rule, told the team how
-to fix it, and left a reproducible audit record. Nobody scheduled a meeting.
+That rejection took milliseconds, cited two exact rules, told the team how to
+fix each one, and left a reproducible audit record. Nobody scheduled a
+meeting.
+
+Want to explore the rule packs, skills, and tests directly? `git clone` the
+repo.
 
 ## How it works
 
@@ -118,7 +137,7 @@ Rule packs ship with decision tests, and CI fails when a policy change flips
 a decision you didn't mean to flip:
 
 ```bash
-hashimori test examples/tests/decisions.yaml --rules rulepacks/
+hashimori test examples/tests/decisions.yaml --rules rulepacks/baseline rulepacks/red-zone
 ```
 
 ```text
@@ -137,7 +156,7 @@ use cases as PRs: red zones fail the check with the remedy in the log,
 "needs review" auto-assigns your reviewers via CODEOWNERS, and the merge
 *is* the auditable record.
 
-## Runtime: enforce every agent tool call *(new in 0.2)*
+## Runtime: enforce every agent tool call *(new in 0.3)*
 
 Reviewing a tool isn't reviewing an action. `Write` is fine for a log file and
 not fine for `.mcp.json`; `dig` is fine until your API key is in the hostname.
@@ -191,7 +210,7 @@ Wire it into Claude Code (`.claude/settings.json`):
       "command": "python3 -m hashimori.runtime.hook post || true"}]}]}}
 ```
 
-**What else ships in 0.2:**
+**What else ships in 0.3:**
 
 | | |
 |---|---|
@@ -226,7 +245,18 @@ hashimori init governance/        # rules + intake template + tests, ready to ed
 or point the `policy-to-rules` skill at the PDF you already have. The shipped
 [rulepacks](rulepacks/) encode the "never" list and graduated-review shape
 most enterprise AI policies share — edit the vocabulary and weights to match
-yours. (They're engineering starting points, not legal advice.)
+yours. (They're engineering starting points, not legal advice.) A worked
+industry example — [`rulepacks/healthcare`](rulepacks/healthcare/) — shows
+how to extend the vocabulary for a specific domain (FDA SaMD clearance,
+HIPAA BAAs, 42 CFR Part 2 consent) and compose it correctly alongside the
+red-zone pack.
+
+Industry packs layer on top of [`red-zone`](rulepacks/red-zone/) instead of
+`baseline` and bring their own vocabulary — see
+[`rulepacks/finance`](rulepacks/finance/) for credit/underwriting, AML,
+algorithmic trading, robo-advice, and third-party cardholder-data patterns:
+six red zones and eight risk factors mapped to `DORA`, `APRA:CPS230`/`CPS234`,
+`PCI-DSS`, `ECOA`/`Reg B`, `FCRA`, `SR-11-7`, `SEC`, and `FINRA`.
 
 ## What Hashimori is not
 
@@ -240,6 +270,31 @@ yours. (They're engineering starting points, not legal advice.)
 - **Not vendor-anything.** MIT-licensed, one dependency (PyYAML), runs
   anywhere Python runs, exports plain JSON. Fork it and make it yours —
   that's the point.
+
+## Hashimori vs. OPA vs. a GRC platform
+
+Three different tools that get compared because they all touch "policy" —
+here's how to tell which one you actually need in about thirty seconds.
+
+| | **Hashimori** | **OPA / Rego** | **Generic GRC platform** (Vanta, OneTrust, Credo AI, ...) |
+|---|---|---|---|
+| Purpose-built for AI use-case governance | Yes — `red_zones`, `risk_factors`, `tiers`, `reviewers`, `remedy` are AI-governance-shaped out of the box | No — general-purpose policy engine; you build this vocabulary yourself in Rego | Partial — usually an "AI governance" module bolted onto a much broader compliance product |
+| Policy language | A small YAML condition tree (leaf + `all`/`any`/`none`) | Rego — a full declarative logic language, far more expressive, far steeper learning curve | Usually a proprietary rules/form builder, not a language |
+| Where policy lives | A YAML file in your own git repo | A `.rego` file in your own git repo | A vendor's hosted UI — not yours, not in your git history |
+| Core you can actually read | ~600 lines, one engineer, one afternoon | The OPA runtime — mature, but nobody reads it end to end before trusting it | Closed source |
+| A decision is | A pure function of (packs, context) — reproducible, SHA-256 hashed | A pure function of (policy, input) — reproducible | Usually workflow-driven (tickets, approvals) — not a deterministic function |
+| Rule packs ship with tests | Yes, first-class (`hashimori test`) | Yes, via `opa test` | Rarely a concept at all |
+| Broader compliance surface (vendor risk, evidence collection, training tracking, cross-framework audit mapping) | No — deliberately out of scope | No | Yes — this is the point of a GRC platform |
+| Ecosystem maturity (sidecars, admission control, bundles, decision logs at scale) | Still small and young | Yes — mature, used far beyond AI (Kubernetes, API authz, infra-as-code) | Yes — mature, enterprise-grade |
+| Generates/red-teams rule packs from a policy doc via AI | Yes (`policy-to-rules`, `rule-redteam` skills) | No | No |
+| Cost / license | Free, MIT | Free, Apache 2.0 | Usually paid, often enterprise-priced |
+
+Need general-purpose policy enforcement across many systems, not just AI
+intake? Use OPA — it's more powerful and more mature. Need a single system
+of record for your whole compliance program — vendor risk, evidence,
+audits? Use a GRC platform. Need the specific "should we approve this AI
+use case" decision, in code, reviewable by one engineer, with an audit
+trail two years from now? That's what Hashimori is for.
 
 ## Design principles
 
@@ -262,3 +317,6 @@ the most valuable contributions — see [CONTRIBUTING.md](CONTRIBUTING.md).
 [MIT](LICENSE). Built by Aakash Yadav and contributors, in a personal
 capacity. First presented at AI TechWorld 2026; runtime enforcement at
 BSides Orlando 2026.
+
+The [financial-services rule pack](rulepacks/finance/) was built by
+[Tushar Badlani](https://tusharbadlani.studio/), in a personal capacity.

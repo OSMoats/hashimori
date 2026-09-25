@@ -1,0 +1,35 @@
+{
+  "use_case": {
+    "name": "Discharge Summary Plain-Language Translator",
+    "description": "Rewrites discharge instructions in plain language via a third-party generative AI API before they're handed to the patient.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["text_simplification"],
+    "subjects": ["patients"],
+    "affected_people": 15000
+  },
+  "data": {
+    "categories": ["phi"]
+  },
+  "model": {
+    "provider": "new_generative_api_vendor",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false,
+    "baa_signed": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": true
+  },
+  "clinical": {
+    "decision_support_type": "administrative",
+    "ai_generated_documentation": false,
+    "validation_study_completed": true
+  }
+}

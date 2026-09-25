@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call: # lets release.yml reuse this exact test job as its pre-publish gate
 
 permissions:
   contents: read
@@ -14,16 +15,24 @@ jobs:
       matrix:
         python-version: ["3.9", "3.12"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev]"
       - name: Unit tests
-        run: pytest -q
+        run: pytest -q --cov=hashimori --cov-report=term-missing
       - name: Rule packs validate
         run: hashimori validate rulepacks/ hashimori/runtime/packs/agent-runtime.yaml
       - name: Runtime demo scenes (deterministic)
         run: for i in 1 2 3 4 5 6 7 8; do ./demo/replay.sh $i > /dev/null; done
       - name: Policy decision tests
-        run: hashimori test examples/tests/decisions.yaml --rules rulepacks/
+        run: hashimori test examples/tests/decisions.yaml --rules rulepacks/baseline rulepacks/red-zone
+      - name: Healthcare pack decision tests
+        run: hashimori test examples/tests/healthcare-decisions.yaml --rules rulepacks/red-zone rulepacks/healthcare
+      - name: Finance pack decision tests
+        run: hashimori test examples/tests/finance-decisions.yaml --rules rulepacks/red-zone rulepacks/finance

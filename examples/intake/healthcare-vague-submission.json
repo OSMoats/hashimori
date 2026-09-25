@@ -1,0 +1,13 @@
+{
+  "use_case": {
+    "name": "Patient No-Show Risk Flag",
+    "description": "Flags patients likely to miss their appointment so the clinic can call ahead."
+  },
+  "data": {
+    "categories": ["phi"]
+  },
+  "model": {
+    "provider": "new_scheduling_vendor",
+    "provider_approved": true
+  }
+}
