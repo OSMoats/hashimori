@@ -25,3 +25,4 @@ demo/results/
 # evaluation data (third-party datasets; not redistributed)
 demo/eval/data/
 demo/eval/results/
+demo/fleet/

@@ -12,6 +12,7 @@ use cases at design time. Everything stateful lives here, outside it.
 from __future__ import annotations
 
 import fnmatch
+import hashlib
 import json
 import os
 import re
@@ -47,7 +48,9 @@ judge_mod = _LazyJudge()
 @dataclass
 class Verdict:
     decision: str                      # allow | ask | deny
-    reason: str
+    reason: str                        # full reason (audit / SOC / human)
+    agent_reason: str = ""             # what the agent is told (see HASHIMORI_AGENT_MESSAGES)
+    incident: str = ""                 # short id linking the agent's message to the audit record
     price: float = 0.0
     spent_before: float = 0.0
     budget: dict = field(default_factory=dict)
@@ -131,7 +134,15 @@ def rewrite_rm(command: str) -> str | None:
             return None
         if any(t in ("/", "~", ".", "..") or t.startswith(("/", "~", "..")) for t in targets):
             return None  # outside-workspace deletes are priced / denied, never quietly moved
-        out.append(f"mkdir -p {dest} && mv -- {' '.join(targets)} {dest}/")
+        # keep each target's relative directory so `hashimori restore` can put it back
+        groups: dict[str, list[str]] = {}
+        for t in targets:
+            groups.setdefault(os.path.dirname(t.rstrip("/")) or ".", []).append(t)
+        moves = []
+        for d, ts in groups.items():
+            where = dest if d == "." else f"{dest}/{d}"
+            moves.append(f"mkdir -p {where} && mv -- {' '.join(ts)} {where}/")
+        out.append(" && ".join(moves))
         rewrote = True
     return "".join(out) if rewrote else None
 
@@ -219,6 +230,10 @@ class Gate:
         call, session = build(effects, rm_rewrite is not None)
 
         # ---- rewrite before refuse ------------------------------------------
+        # Only for calls that would otherwise be priced or asked: a red zone is never rewritten away.
+        if rm_rewrite and any(evaluate_rules(cfg.packs, self._ctx(e, call, session), short_circuit=True).red_zones_hit
+                              for e in effects):
+            rm_rewrite = None
         for rw in cfg.rewrites:
             hit = any(evaluate_condition(rw["when"], self._ctx(e, call, session)).is_true for e in effects)
             if hit and rw.get("action") == "quarantine" and rm_rewrite:
@@ -274,7 +289,7 @@ class Gate:
             decision = "ask"
             reason = f"✋ Price {price:g} exceeds per-call limit {budget['per_call']:g}: " + \
                 "; ".join(f"{f['id']} +{f['weight']:g} {f['name']}" for f in factors)
-        elif prior.spent + price > budget["session"]:
+        elif price > 0 and prior.spent + price > budget["session"]:   # free calls never hit the budget
             decision = "ask"
             reason = (f"✋ Session risk budget exhausted: {prior.spent:g} spent + {price:g} "
                       f"> {budget['session']:g}. A human approval resets the meter.")
@@ -297,8 +312,19 @@ class Gate:
         timings["ledger"] = (time.perf_counter() - tl) * 1e6
         timings["total"] = (time.perf_counter() - t0) * 1e6
 
+        incident = "H-" + hashlib.sha256(f"{session_id}|{payload.get('tool_use_id')}|{time.time_ns()}|{reason}"
+                                         .encode()).hexdigest()[:8]
+        agent_reason = reason
+        if decision == "deny" and os.environ.get("HASHIMORI_AGENT_MESSAGES", "full") == "minimal":
+            # Denials leak information and coach workarounds (cf. arXiv 2604.04035). Tell the agent
+            # as little as possible; the full reason is in the audit log under the same incident id.
+            agent_reason = f"Blocked by policy (incident {incident}). No workaround is available to the agent."
+        elif rewrite:
+            agent_reason = reason + (f" Your command was rewritten to `{rewrite['to']}`; nothing was deleted. "
+                                     "A human can restore with `hashimori restore`.")
         return Verdict(
-            decision=decision, reason=reason, price=price, spent_before=prior.spent, budget=dict(budget),
+            decision=decision, reason=reason, agent_reason=agent_reason, incident=incident,
+            price=price, spent_before=prior.spent, budget=dict(budget),
             red_zones=[{k: h.get(k) for k in ("id", "name", "object", "refs")} for h in red],
             factors=factors, unknown=unknown, effects=[e.to_context() for e in effects],
             rewrite=rewrite, updated_input=updated_input if decision != "deny" else None,
@@ -329,15 +355,31 @@ class Gate:
         return {"human_approved": approved, "secret_in_output": secret}
 
 
+def input_fingerprint(tool: str, tool_input: dict) -> str:
+    """Stable fingerprint of what the agent asked for, robust to small variations
+    (numbers, hex, whitespace) — lets the fleet sensor cluster the same attack."""
+    raw = tool_input.get("command") if tool == "Bash" else json.dumps(tool_input, sort_keys=True)
+    norm = re.sub(r"\s+", " ", str(raw or "")).strip().lower()
+    norm = re.sub(r"[0-9a-f]{8,}", "<hex>", norm)
+    norm = re.sub(r"\d+", "0", norm)
+    return hashlib.sha256(f"{tool}|{norm}".encode()).hexdigest()[:12]
+
+
 def audit_line(payload: dict, v: Verdict, mode: str) -> dict:
     return {
+        "host": os.environ.get("HASHIMORI_HOST") or os.uname().nodename if hasattr(os, "uname") else None,
+        "input_fp": input_fingerprint(payload.get("tool_name", ""), payload.get("tool_input") or {}),
         "ts": datetime.now(timezone.utc).isoformat(), "mode": mode,
         "session_id": payload.get("session_id"), "agent": payload.get("agent_type") or "main",
         "tool": payload.get("tool_name"), "tool_use_id": payload.get("tool_use_id"),
-        "decision": v.decision, "reason": v.reason, "price": v.price, "spent_before": v.spent_before,
+        "decision": v.decision, "reason": v.reason, "incident": v.incident,
+        "agent_reason": v.agent_reason if v.agent_reason != v.reason else None,
+        "price": v.price, "spent_before": v.spent_before,
         "red_zones": [h["id"] for h in v.red_zones], "factors": [f["id"] for f in v.factors],
         "unknown": v.unknown, "rewrite": v.rewrite, "judge": v.judge,
         "effects": [{k: e.get(k) for k in ("verb", "object", "surface", "sensitivity", "reversible",
                                            "blast", "tags")} for e in v.effects],
+        "session_untrusted": bool(v.session.get("untrusted")),
+        "session_sensitivity": v.session.get("max_sensitivity"),
         "timings_us": v.timings_us,
     }

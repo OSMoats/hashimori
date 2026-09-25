@@ -14,6 +14,8 @@ Environment:
     HASHIMORI_ALLOW     defer (default) | grant     — on allow, defer to Claude
                         Code's normal permission flow, or grant (skip prompts)
     HASHIMORI_ON_ERROR  ask (default) | deny
+    HASHIMORI_AGENT_MESSAGES  full (default) | minimal — minimal tells the agent only
+                        "blocked (incident H-xxxx)"; the full reason stays in the audit log
     HASHIMORI_RULES     runtime pack dir (default: packs bundled with hashimori)
     HASHIMORI_HOME      ledger + audit dir (default: <project>/.hashimori)
     HASHIMORI_ENVELOPE  envelope.json from `hashimori envelope`
@@ -28,13 +30,16 @@ import sys
 from pathlib import Path
 
 
-def _emit(decision: str | None, reason: str = "", updated_input: dict | None = None) -> None:
+def _emit(decision: str | None, reason: str = "", updated_input: dict | None = None,
+          system_message: str | None = None) -> None:
     if decision is None:
         return  # no opinion: Claude Code's normal permission flow applies
     out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": decision,
                                   "permissionDecisionReason": f"hashimori: {reason}"}}
     if updated_input is not None and decision in ("allow", "ask"):
         out["hookSpecificOutput"]["updatedInput"] = updated_input
+    if system_message:
+        out["systemMessage"] = system_message   # rewrites are told to the agent, not hidden from it
     sys.stdout.write(json.dumps(out))
 
 
@@ -55,11 +60,12 @@ def pre(payload: dict) -> None:
     if v.decision == "allow":
         if v.updated_input is not None:
             grant = os.environ.get("HASHIMORI_ALLOW", "defer") == "grant"
-            _emit("allow" if grant else "ask", v.reason, v.updated_input)
+            _emit("allow" if grant else "ask", v.agent_reason, v.updated_input,
+                  system_message=f"hashimori: {v.agent_reason}")
         elif os.environ.get("HASHIMORI_ALLOW", "defer") == "grant":
-            _emit("allow", v.reason)
+            _emit("allow", v.agent_reason)
         return
-    _emit(v.decision, v.reason, v.updated_input)
+    _emit(v.decision, v.agent_reason, v.updated_input)
 
 
 def post(payload: dict) -> None:

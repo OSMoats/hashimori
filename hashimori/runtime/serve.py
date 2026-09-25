@@ -58,9 +58,10 @@ def make_handler(gate: Gate, home: Path, mode: str, grant: bool):
                 if v.decision == "allow" and v.updated_input is not None and not grant:
                     decision = "ask"
                 out = {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": decision,
-                                              "permissionDecisionReason": "hashimori: " + v.reason}}
+                                              "permissionDecisionReason": "hashimori: " + v.agent_reason}}
                 if v.updated_input is not None and decision in ("allow", "ask"):
                     out["hookSpecificOutput"]["updatedInput"] = v.updated_input
+                    out["systemMessage"] = "hashimori: " + v.agent_reason
                 self._send(out)
             except Exception as exc:  # fail closed
                 self._send({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",

@@ -181,6 +181,50 @@ def cmd_bench(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_restore(args: argparse.Namespace) -> int:
+    from hashimori.runtime.restore import batches, restore
+    if args.list or not (args.batch or args.latest):
+        found = batches(args.cwd)
+        if not found:
+            print("quarantine is empty")
+        for b in found:
+            print(f"{b['batch']}  {b['files']} file(s), {b['bytes']:,} bytes  ← {', '.join(b['paths'][:6])}")
+        if found and not args.list:
+            print("\nrestore the latest with:  hashimori restore --latest")
+        return 0
+    r = restore(args.cwd, None if args.latest else args.batch)
+    print(r["message"])
+    for c in r["conflicts"]:
+        print(f"  conflict (left in quarantine): {c}")
+    return 0 if not r["conflicts"] else 1
+
+
+def cmd_fleet(args: argparse.Namespace) -> int:
+    from hashimori.runtime import fleet
+    events = fleet.load(args.paths)
+    rep = fleet.analyze(events, args.min_sessions, args.window_hours)
+    if args.ocsf:
+        from hashimori.runtime.ocsf import to_jsonl
+        Path(args.ocsf).write_text(to_jsonl(events, rep["alerts"]))
+    if args.json:
+        print(json.dumps(rep, indent=2, default=str))
+    else:
+        print(fleet.render(rep, color=sys.stdout.isatty() or args.force_color))
+        if args.ocsf:
+            print(f"  OCSF findings → {args.ocsf}")
+    return 2 if rep["alerts"] else 0
+
+
+def cmd_report(args: argparse.Namespace) -> int:
+    from hashimori.runtime import fleet
+    from hashimori.runtime.report import build_html
+    events = fleet.load(args.paths)
+    rep = fleet.analyze(events, args.min_sessions, args.window_hours)
+    Path(args.out).write_text(build_html(events, rep, title=args.title))
+    print(f"wrote {args.out}  ({len(events)} decisions, {len(rep['alerts'])} campaign alert(s))")
+    return 0
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     from hashimori.runtime.serve import serve
     serve(args.port, args.home, args.rules, args.envelope)
@@ -227,6 +271,30 @@ def register(sub) -> None:
     p.add_argument("--session")
     p.add_argument("--home")
     p.set_defaults(func=cmd_ledger)
+
+    p = sub.add_parser("restore", help="List or undo rewrite-before-refuse quarantines")
+    p.add_argument("batch", nargs="?")
+    p.add_argument("--latest", action="store_true")
+    p.add_argument("--list", action="store_true")
+    p.add_argument("--cwd", default=".")
+    p.set_defaults(func=cmd_restore)
+
+    p = sub.add_parser("fleet", help="Correlate audit logs across agents: campaign detection")
+    p.add_argument("paths", nargs="+", help="audit.jsonl files, globs, or directories")
+    p.add_argument("--min-sessions", type=int, default=3)
+    p.add_argument("--window-hours", type=float, default=24.0)
+    p.add_argument("--ocsf", help="also write OCSF-shaped Detection Findings (JSONL) here")
+    p.add_argument("--json", action="store_true")
+    p.add_argument("--force-color", action="store_true", help=argparse.SUPPRESS)
+    p.set_defaults(func=cmd_fleet)
+
+    p = sub.add_parser("report", help="Write a self-contained HTML dashboard from audit logs")
+    p.add_argument("paths", nargs="+")
+    p.add_argument("--out", default="hashimori-report.html")
+    p.add_argument("--title", default="Gatehouse")
+    p.add_argument("--min-sessions", type=int, default=3)
+    p.add_argument("--window-hours", type=float, default=24.0)
+    p.set_defaults(func=cmd_report)
 
     p = sub.add_parser("serve", help="Resident decision point on 127.0.0.1 (fast hooks)")
     p.add_argument("--port", type=int, default=8787)

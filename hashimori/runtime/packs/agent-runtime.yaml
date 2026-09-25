@@ -106,6 +106,15 @@ red_zones:
     message: This agent's use case was DENIED in governance review; it should not be taking actions.
     remedy: Resolve the design-time red zone, re-review, regenerate the envelope.
 
+  - id: RUNTIME-011
+    name: Agent empties the quarantine
+    when:
+      all:
+        - {path: effect.verb, is: delete}
+        - {path: effect.tags, contains: quarantine}
+    message: Rewritten deletes land in .hashimori-trash so a human can undo them. The agent can't purge it.
+    remedy: A human runs `hashimori restore --list` and deletes what they no longer need.
+
   - id: RUNTIME-010
     name: Judge is confident this is harmful
     when:

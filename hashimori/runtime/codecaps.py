@@ -28,6 +28,7 @@ import os
 import re
 
 MAX_BYTES = 256_000
+MAX_FOLLOW = 25   # local modules followed per script
 
 NET_MODULES = {"socket", "requests", "httpx", "urllib", "urllib3", "http", "ftplib", "smtplib",
                "telnetlib", "paramiko", "aiohttp", "websocket", "websockets", "pycurl", "scapy", "xmlrpc"}
@@ -212,8 +213,22 @@ def enabled() -> bool:
     return os.environ.get("HASHIMORI_NO_CODE_INSPECT", "") not in ("1", "true", "yes")
 
 
-def effects_from_code(src: str, lang: str, cwd: str, origin: str, depth: int = 0) -> list:
-    """Derive Effect records from source code. Import here to avoid a cycle."""
+def local_modules(imports: list[str], base_dir: str) -> list[str]:
+    """Imports that resolve to files next to the script (not stdlib / site-packages)."""
+    out = []
+    for name in dict.fromkeys(imports):
+        for cand in (os.path.join(base_dir, name + ".py"), os.path.join(base_dir, name, "__init__.py")):
+            if os.path.isfile(cand):
+                out.append(cand)
+                break
+    return out
+
+
+def effects_from_code(src: str, lang: str, cwd: str, origin: str, depth: int = 0,
+                      base_dir: str | None = None, _seen: set | None = None) -> list:
+    """Derive Effect records from source code. Import here to avoid a cycle.
+    For Python, local modules the code imports are followed (bounded), because
+    `main.py → import helper → helper does the damage` is the obvious bypass."""
     if not enabled():
         return []
     from hashimori.runtime.effects import Effect, _file_effect, lift_shell
@@ -261,6 +276,19 @@ def effects_from_code(src: str, lang: str, cwd: str, origin: str, depth: int = 0
     if f["dynamic"]:
         out.append(Effect(None, ",".join(sorted(set(f["dynamic"])))[:120], "shell", resolved=False,
                           tags=["code_dynamic", tag]))
+    seen = _seen if _seen is not None else set()
+    if base_dir and len(seen) < MAX_FOLLOW:
+        for mod in local_modules(f["imports"], base_dir):
+            if mod in seen or len(seen) >= MAX_FOLLOW:
+                continue
+            seen.add(mod)
+            try:
+                with open(mod, "rb") as fh:
+                    msrc = fh.read(MAX_BYTES).decode("utf-8", "replace")
+            except OSError:
+                continue
+            rel = os.path.relpath(mod, cwd or os.getcwd())
+            out += effects_from_code(msrc, "python", cwd, rel, depth, os.path.dirname(mod), seen)
     return out
 
 
@@ -296,4 +324,5 @@ def script_effects(argv: list[str], cwd: str, depth: int = 0) -> list | None:
     if lang is None:
         first = src.splitlines()[0] if src else ""
         lang = "python" if ("python" in first or full.endswith(".py")) else "shell"
-    return effects_from_code(src, lang, cwd, os.path.relpath(full, cwd or os.getcwd()), depth)
+    return effects_from_code(src, lang, cwd, os.path.relpath(full, cwd or os.getcwd()), depth,
+                             base_dir=os.path.dirname(full), _seen={full})

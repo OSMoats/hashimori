@@ -71,6 +71,7 @@ PATH_TAGS: list[tuple[str, list[str]]] = [
         "**/.vscode/settings.json", "**/.hashimori/**",
     ]),
     ("agent_memory", ["**/CLAUDE.md", "**/AGENTS.md", "**/.cursorrules"]),
+    ("quarantine", ["**/.hashimori-trash", "**/.hashimori-trash/**"]),
     ("secret_store", [
         "**/.env", "**/.env.*", "~/.ssh", "~/.ssh/**", "~/.aws", "~/.aws/**", "~/.config/gh",
         "~/.config/gh/**", "~/.gnupg", "~/.gnupg/**", "~/.kube/config", "~/.docker/config.json",
