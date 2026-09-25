@@ -12,18 +12,10 @@ dist/
 film-demo.sh
 publish-to-github.sh
 
-# runtime state and demo artifacts
+# runtime state
 .hashimori/
 .hashimori-trash/
-demo/.venv/
-demo/serve.sh
-demo/chat-outbox.log
-demo/workspace/.claude/
-demo/workspace/.mcp.json
-demo/results/
-!demo/workspace/build/
 
-# evaluation data (third-party datasets; not redistributed)
-demo/eval/data/
-demo/eval/results/
-demo/fleet/
+# benchmark data (third-party datasets; not redistributed) and results
+benchmarks/runtime/data/
+benchmarks/runtime/results/

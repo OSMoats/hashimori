@@ -1,37 +1,48 @@
 # Changelog
 
-## 0.3.0 — Runtime enforcement (BSides Orlando 2026)
+## 0.3.0 — Runtime enforcement for AI agent tool calls
 
-### Added during BSides prep
+### Added
 
-- Script inspection: local scripts run by python/bash/sh (and their local imports) are
-  lifted into effects before they run. Site-packages are not inspected (pinned gap).
-- Shell adapter: variables and loops, find -exec/-delete, xargs/parallel, wrappers,
-  process substitution, system-change commands, downloads; unresolved targets on
-  writes/deletes are unknown (never guessed).
-- Fleet sensor (`hashimori fleet`), Gatehouse HTML report (`hashimori report`),
-  OCSF-shaped export, `hashimori restore`, minimal agent messages with incident ids,
-  rewrites reported to the agent via PostToolUse, Cursor adapter.
-- Evaluation harness on NL2Bash, RedCode-Exec (Python + Bash) and MBPP with a blind
-  baseline and held-out splits (`demo/eval`).
+- **`hashimori.runtime`**: decide on every tool call an agent makes — allow, ask,
+  deny, or rewrite — with the same engine and rule language used for design-time
+  review. Default policy in `hashimori/runtime/packs/agent-runtime.yaml`.
+  - Effect lifting for shell, file tools, web fetch/search, sub-agents and MCP
+    tools. MCP tools are mapped by an operator-owned registry (`--tools` /
+    `HASHIMORI_TOOLS`); server self-declared annotations are not trusted.
+  - Shell adapter: variables and loops, `find -exec/-delete`, `xargs`/`parallel`,
+    wrappers, process substitution, system-change commands, downloads. Unresolved
+    targets on writes and deletes are unknown, never guessed; unknowns ask.
+  - Script inspection: local scripts run by python/bash/sh, and their local
+    imports, are lifted into effects before they run. Installed packages are not
+    inspected (pinned as a known-gap test).
+  - Red zones, per-call pricing, a session risk budget, raise-only taint shared
+    with sub-agents, and rewrite-before-refuse (workspace deletes → a recoverable
+    quarantine the agent can't empty; `hashimori restore`).
+- **Adapters:** Claude Code `PreToolUse`/`PostToolUse` (fails closed; tells the
+  agent when a call was rewritten), Cursor hooks, and `hashimori serve` for
+  low-latency hooks. Ready-made configs in `adapters/`.
+- **Design time → runtime:** `hashimori envelope` compiles a review decision into
+  runtime limits; `hashimori learn` proposes an envelope from shadow-mode logs.
+- **Operations:** `hashimori fleet` (cross-session and cross-host campaign
+  detection, "allowed elsewhere"), `hashimori report` (self-contained HTML),
+  OCSF Detection Finding export, minimal agent messages with incident ids,
+  `check`, `ledger`, `bench`.
+- **Optional model judge**, escalate-only, behind a small adapter interface:
+  `http` (any model behind a service you run) and `jev` (TypeSafe), or your own
+  object via `judge.use()`. Malformed answers are discarded; hard spend cap.
+- **Benchmark** on NL2Bash, RedCode-Exec (Python and Bash) and MBPP, with
+  held-out splits and pinned dataset sources (`benchmarks/runtime/`).
+- **Docs and examples:** `docs/runtime.md`, `examples/runtime/tour.sh` (a
+  self-checking tour, also run in CI), `examples/runtime/tools.yaml`,
+  `examples/intake/coding-agent.json`.
 
-### Runtime enforcement
+### Changed
 
-- **New: `hashimori.runtime`** — enforce AI agent tool calls with the same engine
-  and rule language used for design-time review.
-  - Effect lifting for shell, file tools, web fetch, sub-agents, and MCP tools
-    (operator-owned registry; server self-declared annotations are not trusted).
-  - Red zones, per-call pricing, session risk budget, raise-only taint shared with
-    sub-agents, rewrite-before-refuse (workspace deletes → quarantine move).
-  - Claude Code PreToolUse/PostToolUse adapter that fails closed; resident
-    `hashimori serve` for low-latency hooks.
-  - `hashimori envelope`: design-time decision → runtime limits.
-  - `hashimori learn`: shadow-mode audit → proposed envelope.
-  - Optional escalate-only semantic judge (TypeSafe Jev adapter) with a hard spend cap.
-  - `hashimori check`, `ledger`, `bench` commands. Demo kit in `demo/`.
-- **Engine:** `evaluate_rules()` and `select_tier()` exposed; pack hashes cached at
-  load (full evaluation was spending ~99% of its time re-hashing packs); libyaml
-  safe loader used when available.
+- **Engine:** `evaluate_rules()` and `select_tier()` are exposed; pack hashes are
+  cached at load (a full evaluation was spending ~99% of its time re-hashing
+  packs); the libyaml safe loader is used when available. `evaluate()` behaves
+  the same.
 
 ## 0.2.0 — first PyPI release (Sept 2026)
 

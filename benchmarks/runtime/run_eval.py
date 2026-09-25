@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Evaluate Hashimori Runtime on public Hugging Face datasets.
+"""Benchmark Hashimori Runtime on public datasets.
 
-    python3 demo/eval/fetch_hf.py          # once: downloads to demo/eval/data/
-    python3 demo/eval/run_eval.py          # → demo/eval/results/{summary.json,report.md,*.csv}
-    HASHIMORI_JUDGE=jev python3 demo/eval/run_eval.py --judge-sample 5   # + the model tier
+    python3 benchmarks/runtime/fetch_datasets.py   # once: pinned upstream sources → data/
+    python3 benchmarks/runtime/run_eval.py         # → results/{summary.json,report.md,*.csv}
+    HASHIMORI_JUDGE=<adapter> python3 benchmarks/runtime/run_eval.py --judge-sample 5   # + a model judge
 
 What is measured (and what is not):
 
-  NL2Bash (9,305 real bash one-liners)       → coverage, friction, decision mix, latency.
+  NL2Bash (10,624 unique bash one-liners)     → coverage, friction, decision mix, latency.
       There are no harm labels, so a DENY here is not automatically a false positive;
       we report why each denial fired and random samples to read.
   RedCode-Exec Python (risky snippets)       → how often a risky program is stopped
@@ -21,7 +21,7 @@ Configurations compared on identical inputs:
   script inspection – runtime gate, script inspection ON (reads task.py before it runs).
 
 Held-out split for RedCode: scenarios 1–10 = dev, 11–21 = test. The code
-inspector was written before this dataset was downloaded (commit e206624);
+inspector was written before this dataset was downloaded;
 report test-set numbers as the headline.
 """
 
@@ -42,7 +42,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parents[1]))
+sys.path.insert(0, str(HERE.parents[1].parent))
 
 from hashimori.runtime.gate import Gate, RuntimeConfig  # noqa: E402
 
@@ -154,7 +154,7 @@ def eval_nl2bash(rows, seed=7):
 def run_program(r: Runner, code: str, mode: str, sid: str, lang: str = "python"):
     """How an agent would run a program: inline/direct, or write a file then run it."""
     ws = tempfile.mkdtemp(prefix="prog-")
-    (Path(ws) / ".env").write_text("DEMO_API_KEY=not-a-real-key-0000\n")
+    (Path(ws) / ".env").write_text("EXAMPLE_API_KEY=not-a-real-key-0000\n")
     if mode == "inline":
         cmd = ("python3 -c " + shlex.quote(code)) if lang == "python" else code
         v, ms = r.decide("Bash", {"command": cmd}, ws, sid)
@@ -273,7 +273,7 @@ def scenario_labels(rc_rows):
 def eval_judge(rc_rows, mbpp_rows, per_scn: int, seed=11):
     from hashimori.runtime import judge
     if not judge.enabled():
-        return {"skipped": "set HASHIMORI_JUDGE=jev and TYPESAFE_API_KEY"}
+        return {"skipped": "no judge configured (see docs/runtime.md, 'Model judge')"}
     rng = random.Random(seed)
     by = defaultdict(list)
     for row in rc_rows:
@@ -375,7 +375,7 @@ def report_md(summary) -> str:
               f"latency p50 {j['latency_ms']['p50']} ms, p95 {j['latency_ms']['p95']} ms · "
               f"spend this run ≈ ${round(j['spend']['after']['est_usd'] - j['spend']['before']['est_usd'], 5)}", ""]
     L += ["## Caveats", "",
-          "- Data provenance is in `data/MANIFEST.json` (Hugging Face copies via fetch_hf.py, or the upstream repositories they were made from).",
+          "- Data provenance (repositories and pinned commits) is in `data/MANIFEST.json`, written by fetch_datasets.py.",
           "- Some RedCode scenarios are code-quality risks (not side effects a tool-call gate can see); read the per-scenario table.",
           "- Static analysis only sees the entry script (import indirection is a pinned known gap) and can be defeated by obfuscation it doesn't recognise.",
           "- NL2Bash commands are evaluated in an empty temp workspace; placeholder paths are literal.", ""]
@@ -392,7 +392,7 @@ def main():
     rc_by = {"python": load("redcode_exec_python", args.limit), "bash": load("redcode_exec_bash", args.limit)}
     rc = rc_by["python"]
     if not (nl or rc or mb):
-        print("No data. Run: python3 demo/eval/fetch_hf.py")
+        print("No data. Run: python3 benchmarks/runtime/fetch_datasets.py")
         return 1
     import platform
     summary = {"generated_at": time.strftime("%Y-%m-%d %H:%M:%S %Z"), "python": platform.python_version(),
