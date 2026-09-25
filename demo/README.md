@@ -42,6 +42,9 @@ PAUSE=2 ./demo/replay.sh   # slow enough to film
 | 8 | Price, don't permit | five cheap calls; the fourth breaches the budget → ask |
 | 9 | Semantic judge | needs `HASHIMORI_JUDGE=jev` + key (see below) |
 | 10 | Cost | `hashimori bench` on this machine |
+| 11 | The fleet is the sensor | 40 simulated agents, one poisoned ticket → campaign alert + "allowed elsewhere" + Gatehouse page |
+| 12 | Say less to the agent | agent sees an incident id; the audit keeps the reason |
+| 13 | Undo | rewritten `rm` → quarantine; agent can't purge it; `hashimori restore` |
 
 ## 3. Live scenes with Claude Code
 
@@ -67,6 +70,14 @@ python3 demo/jev_probe.py          # → demo/results/jev-probe-*.json
 
 Every judge call is metered in `~/.hashimori/judge-usage.json`; calls stop at
 `HASHIMORI_JUDGE_BUDGET_USD` (default $2.00). A stopped judge fails closed.
+
+## 5. Evaluation on public datasets
+
+```bash
+python3 demo/eval/fetch_hf.py        # Hugging Face copies (needs huggingface.co)
+python3 demo/eval/run_eval.py        # → demo/eval/results/report.md + summary.json + CSVs
+python3 demo/eval/make_charts.py     # → slide-ready SVG charts
+```
 
 ## Reset between takes
 

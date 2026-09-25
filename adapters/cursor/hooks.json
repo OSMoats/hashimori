@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [{"command": "python3 -m hashimori.runtime.cursor", "timeout": 30, "failClosed": true}],
+    "beforeMCPExecution":   [{"command": "python3 -m hashimori.runtime.cursor", "timeout": 30, "failClosed": true}],
+    "beforeReadFile":       [{"command": "python3 -m hashimori.runtime.cursor", "timeout": 30, "failClosed": true}],
+    "preToolUse":           [{"command": "python3 -m hashimori.runtime.cursor", "timeout": 30, "failClosed": true,
+                              "matcher": "Write|Delete|Task"}]
+  }
+}

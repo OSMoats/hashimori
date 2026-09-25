@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 — additions during BSides prep
+
+- Script inspection: local scripts run by python/bash/sh (and their local imports) are
+  lifted into effects before they run. Site-packages are not inspected (pinned gap).
+- Shell adapter: variables and loops, find -exec/-delete, xargs/parallel, wrappers,
+  process substitution, system-change commands, downloads; unresolved targets on
+  writes/deletes are unknown (never guessed).
+- Fleet sensor (`hashimori fleet`), Gatehouse HTML report (`hashimori report`),
+  OCSF-shaped export, `hashimori restore`, minimal agent messages with incident ids,
+  rewrites reported to the agent via PostToolUse, Cursor adapter.
+- Evaluation harness on NL2Bash, RedCode-Exec (Python + Bash) and MBPP with a blind
+  baseline and held-out splits (`demo/eval`).
+
 ## 0.2.0 — Runtime enforcement (BSides Orlando 2026)
 
 - **New: `hashimori.runtime`** — enforce AI agent tool calls with the same engine

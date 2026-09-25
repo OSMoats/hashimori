@@ -57,9 +57,13 @@ server bound to 127.0.0.1. Its guarantees:
   to the judge's API. Treat enabling it as an egress decision. A hard spend
   cap (`HASHIMORI_JUDGE_BUDGET_USD`, default $2) stops calls; a stopped judge
   fails closed.
-- **Scope.** Runtime rules see what the agent *asks* to run, not what code
-  does once running (see `test_known_gap_write_then_execute`). Use an OS
-  sandbox and scoped credentials alongside it.
+- **Scope.** Runtime rules see what the agent *asks* to run. Local scripts (and
+  their local imports) are read before they run, but installed packages,
+  obfuscated or data-dependent code, and files changed between check and run
+  are not (see `test_known_gap_installed_packages_are_not_inspected`). Use an
+  OS sandbox and scoped credentials alongside it.
+- **Fleet/report/export** read audit logs you point them at and write local
+  files only. Audit logs contain command text: treat them as sensitive.
 - One runtime dependency (PyYAML). Dependencies are monitored by
   Dependabot.
 

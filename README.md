@@ -191,6 +191,25 @@ Wire it into Claude Code (`.claude/settings.json`):
       "command": "python3 -m hashimori.runtime.hook post || true"}]}]}}
 ```
 
+**What else ships in 0.2:**
+
+| | |
+|---|---|
+| **Look inside what runs** | `python3 task.py`, `bash run.sh`, `./x.sh`: the script (and the local modules it imports) is read at decision time and lifted into effects. Closes the write-then-execute hole for code the agent can see. |
+| **Fleet sensor** | `hashimori fleet <audit logs>` correlates denials across agents and hosts by destination, request fingerprint and rule. Separates injection-shaped *campaigns* from recurring policy friction, and flags destinations that were **allowed** somewhere else. |
+| **Gatehouse** | `hashimori report <logs> --out gatehouse.html`: one self-contained HTML page — decision mix, campaign alerts, per-host timeline, incidents. |
+| **OCSF export** | `hashimori fleet … --ocsf findings.jsonl`: decisions and campaigns as OCSF-shaped Detection Findings for your SIEM. |
+| **Say less to the agent** | `HASHIMORI_AGENT_MESSAGES=minimal`: the agent sees `Blocked by policy (incident H-1a2b3c4d)`; the full reason is in the audit log. Denials otherwise coach workarounds. |
+| **Undo** | Rewritten deletes keep their paths in `.hashimori-trash/`; `hashimori restore --latest` puts them back; agents can't purge the quarantine. The agent is told its `rm` became a move. |
+| **Cursor too** | `python3 -m hashimori.runtime.cursor` behind Cursor's `beforeShellExecution` / `beforeMCPExecution` / `beforeReadFile` / `preToolUse` hooks ([adapters/cursor/hooks.json](adapters/cursor/hooks.json)). |
+
+**Measured on public datasets** ([demo/eval](demo/eval/)): 10,624 real shell one-liners
+(NL2Bash) — 82.9% decided without a human, p50 ≈ 1 ms per decision; RedCode-Exec
+risky programs — 90% of Python and 98.9% of Bash *action* scenarios stopped
+(held-out: 66.7% and 96.7%); MBPP benign Python — 0 of 974 stopped. What it
+can't see is in the same report: read-only disclosures are recorded but allowed,
+and code-quality bugs are out of scope for a tool-call gate.
+
 The `|| echo` matters: Claude Code treats a crashed hook as non-blocking, so
 the harness fails *open* — the fallback makes it fail closed. For ~10× lower
 latency, run `hashimori serve` and point the hook at it with `curl`

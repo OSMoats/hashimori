@@ -65,5 +65,25 @@ scene9() { title "9 · A semantic judge — escalate only" "Typed-decision model
 scene10() { title "10 · What it costs" "Decision latency on this machine."
   "$HM" bench --n 1000 --procs 20; }
 
-if [[ $# -gt 0 ]]; then "scene$1"; else for i in 1 2 3 4 5 6 7 8 9 10; do "scene$i"; done; fi
+scene11() { title "11 · The fleet is the sensor" "40 simulated agents on 5 hosts, one poisoned ticket, the real gate."
+  local PY; PY="$(dirname "$HM")/python"; [[ -x "$PY" ]] || PY=python3
+  "$PY" "$DEMO_DIR/fleet_sim.py" | tail -2; sleep "$PAUSE"
+  "$HM" fleet "$DEMO_DIR/fleet" --force-color | head -16
+  "$HM" report "$DEMO_DIR/fleet" --out "$DEMO_DIR/fleet/gatehouse.html"
+  echo "   open $DEMO_DIR/fleet/gatehouse.html"; sleep "$PAUSE"; }
+
+scene12() { title "12 · Say less to the agent" "Denials leak information. The agent gets an incident id; the SOC gets the reason."
+  (cd "$WS" && HASHIMORI_AGENT_MESSAGES=minimal "$HM" check --home "$HOME_DIR" --force-color --json \
+     --tool Write --input '{"file_path":".mcp.json","content":"{}"}' --session s12 --dry-run \
+     | python3 -c "import sys,json; r=json.load(sys.stdin); print('   agent sees : ', r['agent_reason']); print('   audit keeps: ', r['reason'][:110])"); sleep "$PAUSE"; }
+
+scene13() { title "13 · Undo" "Rewritten deletes are recoverable — and the agent can't purge the quarantine."
+  local T; T="$(mktemp -d -t hashimori-undo-XXXX)"; mkdir -p "$T/build"; echo "artifact" > "$T/build/app.js"
+  (cd "$T" && "$HM" check --home "$HOME_DIR" --force-color -c 'rm -rf build/*' --session s13 --json \
+     | python3 -c "import sys,json; print(json.load(sys.stdin)['rewrite']['to'])" > "$T/.cmd")
+  (cd "$T" && bash "$T/.cmd" && echo "   after the (rewritten) rm: build/ has $(ls build | wc -l | tr -d ' ') file(s)")
+  (cd "$T" && "$HM" check --home "$HOME_DIR" --force-color -c 'rm -rf .hashimori-trash' --session s13 | tail -4)
+  (cd "$T" && "$HM" restore --latest && echo "   build/ now has: $(ls build)"); sleep "$PAUSE"; }
+
+if [[ $# -gt 0 ]]; then "scene$1"; else for i in 1 2 3 4 5 6 7 8 9 10 11 12 13; do "scene$i"; done; fi
 rm -rf "$HOME_DIR"
