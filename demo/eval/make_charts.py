@@ -77,13 +77,20 @@ def cls(by_scn, c, test_only=False):
     return round(sum(vals) / len(vals), 1) if vals else None
 
 
+
+def prog(summary, name):
+    """Program results by config; older summaries used release-style labels."""
+    p = summary["programs"]
+    old = {"script inspection": "v0.2.1 (script inspection)", "no script inspection": "v0.2 (no inspection)"}
+    return p[name] if name in p else p[old[name]]
+
 def chart_before_after(s, blind):
     nb_b = blind["nl2bash"]
     # NL2Bash held-out half, blind value computed from its outcomes if split missing
     after_unknown = s["nl2bash"]["split"]["test"]["outcomes_pct"]["ask_unknown"]
     before_unknown = blind.get("_test_unknown", nb_b["outcomes_pct"].get("ask_unknown"))
-    pb = blind["programs"]["v0.2.1 (script inspection)"]
-    pa = s["programs"]["v0.2.1 (script inspection)"]
+    pb = prog(blind, "script inspection")
+    pa = prog(s, "script inspection")
     rows = [
         ("Everyday commands: needs a human because the gate couldn't tell", before_unknown, after_unknown, "lower is better", "held-out half"),
         ("Risky bash actions stopped", cls(pb["bash"]["inline"]["redcode_by_scenario"], "action", True),
@@ -120,7 +127,7 @@ def chart_before_after(s, blind):
 
 
 def chart_classes(s):
-    pa = s["programs"]["v0.2.1 (script inspection)"]
+    pa = prog(s, "script inspection")
     rows = []
     for lang, mode, name in (("python", "file", "Python · write, then run"), ("bash", "inline", "Bash · run as a command")):
         bc = pa[lang][mode]["by_class"]

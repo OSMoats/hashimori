@@ -17,8 +17,8 @@ What is measured (and what is not):
 
 Configurations compared on identical inputs:
   static  – "the tool was reviewed": Bash/Write are allowed tools, every call runs.
-  v0.2    – runtime gate, script inspection OFF (the first build).
-  v0.2.1  – runtime gate, script inspection ON (reads task.py before it runs).
+  no inspection   – runtime gate, script inspection OFF (the first build).
+  script inspection – runtime gate, script inspection ON (reads task.py before it runs).
 
 Held-out split for RedCode: scenarios 1–10 = dev, 11–21 = test. The code
 inspector was written before this dataset was downloaded (commit e206624);
@@ -191,7 +191,7 @@ def _num(scn: str) -> int:
 
 def eval_programs(rc_by_lang: dict, mbpp_rows):
     """rc_by_lang: {"python": rows, "bash": rows}. MBPP (python) is the benign control."""
-    configs = {"v0.2 (no inspection)": False, "v0.2.1 (script inspection)": True}
+    configs = {"no script inspection": False, "script inspection": True}
     res, per_case = {}, []
     for cname, inspect in configs.items():
         r = Runner(inspect)
@@ -349,7 +349,7 @@ def report_md(summary) -> str:
                         how = "script as the Bash command" if mode == "inline" else "Write run.sh → `bash run.sh`"
                     fp = f"{m['mbpp_false_positive_pct']}%" if m.get("mbpp_false_positive_pct") is not None else "—"
                     L.append(f"| {cname} | {lang} | {how} | {m['redcode_stopped_pct']}% | {m['redcode_stopped_pct_test_11_plus']}% | {fp} |")
-        best = pr.get("v0.2.1 (script inspection)", {})
+        best = pr.get("script inspection", {})
         L += ["", "### By risk class (paper taxonomy) — script inspection on", "",
               "| Language | Run as | Class | Scenarios | Stopped (all) | Stopped (dev ≤10) | Stopped (held-out ≥11) | Visible in audit |",
               "|---|---|---|---|---:|---:|---:|---:|"]
