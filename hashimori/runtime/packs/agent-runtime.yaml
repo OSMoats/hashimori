@@ -1,0 +1,215 @@
+version: 1
+pack:
+  name: agent-runtime
+  description: >
+    Runtime rules for AI agent tool calls. Rules are written over EFFECTS
+    (effect.*), the call as a whole (call.*), and the session's history
+    (session.*) — never over tool names. Same schema and engine as
+    design-time packs: red zones deny instantly, risk factors price the
+    call, unknowns fail closed to a human.
+
+# ── Red zones: never, regardless of budget ───────────────────────────────────
+red_zones:
+  - id: RUNTIME-001
+    name: Agent rewrites its own control plane
+    when:
+      all:
+        - {path: effect.verb, in: [write, delete]}
+        - {path: effect.tags, contains: agent_config}
+    message: >
+      An agent may not edit its own permissions, hooks, MCP server list, or
+      guardrail config. This is how a prompt injection becomes code execution
+      (see CVE-2025-54135, "CurXecute").
+    remedy: A human edits agent configuration, outside the agent session.
+    refs: [OWASP-ASI03, MITRE-ATLAS:AML.T0081]
+
+  - id: RUNTIME-002
+    name: Persistence or VCS hook tampering
+    when:
+      all:
+        - {path: effect.verb, in: [write, delete]}
+        - any:
+            - {path: effect.tags, contains: persistence}
+            - {path: effect.tags, contains: vcs_control}
+    message: Shell profiles, launch agents, cron, and git hooks run code later, without the agent.
+    remedy: Make the change by hand, or add a reviewed script to the repo.
+    refs: [OWASP-ASI05]
+
+  - id: RUNTIME-003
+    name: System path modification
+    when:
+      all:
+        - {path: effect.verb, in: [write, delete]}
+        - {path: effect.tags, contains: system}
+    message: Coding agents do not write to /etc, /usr, /System or similar paths.
+    remedy: Change system configuration through your normal change process.
+
+  - id: RUNTIME-004
+    name: Secret read and sent out in the same call
+    when:
+      all:
+        - {path: call.reads_secret, is: true}
+        - {path: effect.verb, is: egress}
+        - {path: effect.allowlisted, is: false}
+    message: >
+      This single command reads secret material and talks to a destination
+      outside the envelope — the shape of DNS/HTTP exfiltration via an
+      otherwise-allowed tool (see CVE-2025-55284).
+    remedy: None for the agent. If this is legitimate, a human runs it.
+    refs: [OWASP-ASI02, MITRE-ATLAS:AML.T0086]
+
+  - id: RUNTIME-005
+    name: Lethal trifecta completed
+    when:
+      all:
+        - {path: effect.verb, is: egress}
+        - {path: effect.allowlisted, is: false}
+        - {path: session.untrusted, is: true}
+        - {path: session.max_sensitivity, gte: 2}
+    message: >
+      This session has read confidential data AND content an attacker could
+      have written. Any new outbound channel now is a leak path.
+    remedy: Start a fresh session for external communication, or add the destination to the envelope.
+    refs: [OWASP-ASI02, OWASP-LLM03-2026]
+
+  - id: RUNTIME-006
+    name: Restricted data leaving the envelope
+    when:
+      all:
+        - {path: effect.verb, is: egress}
+        - {path: effect.allowlisted, is: false}
+        - {path: session.max_sensitivity, gte: 3}
+    message: This session has touched restricted data (secrets, credentials); it cannot reach new destinations.
+    remedy: Use a clean session, or have a human perform the transfer.
+    refs: [MITRE-ATLAS:AML.T0086]
+
+  - id: RUNTIME-007
+    name: Catastrophic blast radius
+    when:
+      all:
+        - {path: effect.verb, is: delete}
+        - {path: effect.blast, gte: 1000}
+    message: Recursive delete of a home directory, root, or a path outside the workspace.
+    remedy: No agent path. A human does this.
+    refs: [MITRE-ATLAS:AML.T0101]
+
+  - id: RUNTIME-008
+    name: Secret material in an outbound payload
+    when:
+      all:
+        - {path: effect.external, is: true}
+        - {path: effect.tags, contains: secret_in_content}
+    message: The outbound content contains what looks like a credential.
+    remedy: Remove the secret from the message.
+
+  - id: RUNTIME-009
+    name: Use case not approved at design time
+    when: {path: envelope.use_case_denied, is: true}
+    message: This agent's use case was DENIED in governance review; it should not be taking actions.
+    remedy: Resolve the design-time red zone, re-review, regenerate the envelope.
+
+  - id: RUNTIME-010
+    name: Judge is confident this is harmful
+    when:
+      all:
+        - {path: call.judged, is: true}
+        - {path: signals.judge.harmful, gte: 0.85}
+    message: The semantic judge rates this call as very likely harmful. Models may escalate; this is an escalation.
+    remedy: If the model is wrong, a human runs it.
+
+# ── Risk factors: the PRICE of a call. Weights are positive, so every signal
+#    (including the model's) can only make a call more expensive. ─────────────
+risk_factors:
+  - {id: PRICE-001, name: Irreversible effect, weight: 3,
+     when: {path: effect.reversible, is: false}}
+  - {id: PRICE-002, name: Large blast radius (recursive / glob), weight: 3,
+     when: {path: effect.blast, gte: 100}}
+  - id: PRICE-003
+    name: Write or delete outside the workspace
+    weight: 4
+    when:
+      all:
+        - {path: effect.verb, in: [write, delete]}
+        - {path: effect.in_workspace, is: false}
+  - id: PRICE-004
+    name: Egress to a destination outside the envelope
+    weight: 3
+    when:
+      all:
+        - {path: effect.verb, is: egress}
+        - {path: effect.allowlisted, is: false}
+  - {id: PRICE-005, name: Outbound upload / data-carrying request, weight: 3,
+     when: {path: effect.tags, contains: upload}}
+  - id: PRICE-006
+    name: Confidential session reaching outside
+    weight: 5
+    when:
+      all:
+        - {path: effect.verb, is: egress}
+        - {path: effect.allowlisted, is: false}
+        - {path: session.max_sensitivity, gte: 2}
+  - {id: PRICE-007, name: Privilege escalation (sudo/su), weight: 5,
+     when: {path: effect.tags, contains: privilege_escalation}}
+  - id: PRICE-008
+    name: Reads a secret store
+    weight: 2
+    when:
+      all:
+        - {path: effect.verb, is: read}
+        - {path: effect.tags, contains: secret_store}
+  - id: PRICE-009
+    name: Destructive git operation
+    weight: 4
+    when:
+      any:
+        - {path: effect.tags, contains: git_destructive}
+        - {path: effect.tags, contains: history_rewrite}
+  - {id: PRICE-010, name: Delegation to a sub-agent, weight: 1,
+     when: {path: effect.verb, is: delegate}}
+  - {id: PRICE-011, name: Destination computed at run time, weight: 3,
+     when: {path: effect.tags, contains: dynamic_destination}}
+  - id: PRICE-012
+    name: Judge says likely harmful
+    weight: 6
+    when:
+      all:
+        - {path: call.judged, is: true}
+        - {path: signals.judge.harmful, gte: 0.5}
+  - id: PRICE-013
+    name: Judge says off-task for the user's request
+    weight: 5
+    when:
+      all:
+        - {path: call.judged, is: true}
+        - {path: signals.judge.off_task, gte: 0.5}
+
+# ── Rewrite before refuse ───────────────────────────────────────────────────
+rewrites:
+  - id: REWRITE-001
+    name: Delete in the workspace becomes a quarantine move
+    action: quarantine
+    when:
+      all:
+        - {path: call.tool, is: Bash}
+        - {path: call.simple_rm, is: true}
+        - {path: effect.verb, is: delete}
+        - {path: effect.in_workspace, is: true}
+
+# ── The budget: how much risk a session may spend before a human looks ───────
+budget:
+  per_call: 7        # any single call priced above this asks a human
+  session: 20        # cumulative price before the next call asks
+                     # a human approval (an "ask" that then ran) resets the meter
+
+# ── When to spend a model call (latency + data egress) ───────────────────────
+judge:
+  consult_when:
+    any:
+      - {path: call.ambiguous, is: true}
+      - {path: call.has_egress, is: true}
+      - {path: call.has_delete, is: true}
+
+# ── Default envelope; `hashimori envelope` generates one from a design-time review
+envelope:
+  allowed_egress: [package-registry, git-remote, github.com, "*.github.com", pypi.org,
+                   files.pythonhosted.org, registry.npmjs.org, docs.python.org]

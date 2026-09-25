@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "acme": {
+      "command": "__PYTHON__",
+      "args": ["__DEMO_DIR__/mcp_server.py"]
+    }
+  }
+}

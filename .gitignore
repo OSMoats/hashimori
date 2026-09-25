@@ -10,3 +10,14 @@ dist/
 # local helpers, not part of the public repo
 film-demo.sh
 publish-to-github.sh
+
+# runtime state and demo artifacts
+.hashimori/
+.hashimori-trash/
+demo/.venv/
+demo/serve.sh
+demo/chat-outbox.log
+demo/workspace/.claude/
+demo/workspace/.mcp.json
+demo/results/
+!demo/workspace/build/

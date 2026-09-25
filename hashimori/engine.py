@@ -66,38 +66,29 @@ def _hit(rule: dict, pack: Pack, extra: dict | None = None) -> dict:
     return out
 
 
-def evaluate(packs: list[Pack], context: dict, now: datetime | None = None) -> Decision:
-    """Evaluate an intake context against one or more policy packs."""
-    now = now or datetime.now(timezone.utc)
+@dataclass
+class RuleResult:
+    """Raw rule outcome — shared by design-time review and runtime enforcement."""
+
+    red_zones_hit: list[dict]
+    risk_factors_hit: list[dict]
+    score: float
+    unknown_paths: list[str]
+
+
+def evaluate_rules(packs: list[Pack], context: dict, short_circuit: bool = True) -> RuleResult:
+    """Phase 1 + 2: red zones, then weighted risk factors. Pure function."""
     red_hits: list[dict] = []
     unknowns: list[str] = []
-
-    # ---- Phase 1: red zones (short-circuit) --------------------------------
     for pack in packs:
         for rz in pack.red_zones:
             result = evaluate_condition(rz["when"], context)
             unknowns.extend(result.unknown_paths)
             if result.value:
                 red_hits.append(_hit(rz, pack))
+    if red_hits and short_circuit:
+        return RuleResult(red_hits, [], 0.0, sorted(set(unknowns)))
 
-    audit = _audit(packs, context, now)
-
-    if red_hits:
-        return Decision(
-            decision="DENIED",
-            tier=None,
-            score=0.0,
-            red_zones_hit=red_hits,
-            risk_factors_hit=[],
-            obligations=[],
-            reviewers=[],
-            sla_days=None,
-            unknown_paths=sorted(set(unknowns)),
-            reasons=[f"Red zone {h['id']}: {h['name']}" for h in red_hits],
-            audit=audit,
-        )
-
-    # ---- Phase 2: risk scoring --------------------------------------------
     factor_hits: list[dict] = []
     score = 0.0
     for pack in packs:
@@ -108,20 +99,48 @@ def evaluate(packs: list[Pack], context: dict, now: datetime | None = None) -> D
                 weight = float(rf.get("weight", 1))
                 score += weight
                 factor_hits.append(_hit(rf, pack, {"weight": weight}))
+    return RuleResult(red_hits, factor_hits, score, sorted(set(unknowns)))
 
-    unknown_sorted = sorted(set(unknowns))
 
-    # ---- Phase 3: tier selection ------------------------------------------
-    tiers = [t for pack in packs for t in pack.tiers]
+def select_tier(tiers: list[dict], score: float) -> dict:
+    """The first tier whose max_score is not exceeded; the last tier catches all."""
     if not tiers:
         raise ValueError("No tiers defined in any pack — add a 'tiers:' section.")
-
-    tier = tiers[-1]  # catch-all default
     for t in tiers:
         max_score = t.get("max_score")
         if max_score is None or score <= float(max_score):
-            tier = t
-            break
+            return t
+    return tiers[-1]
+
+
+def evaluate(packs: list[Pack], context: dict, now: datetime | None = None) -> Decision:
+    """Evaluate an intake context against one or more policy packs."""
+    now = now or datetime.now(timezone.utc)
+
+    # ---- Phase 1 + 2: red zones (short-circuit), then risk scoring ----------
+    rr = evaluate_rules(packs, context)
+    audit = _audit(packs, context, now)
+
+    if rr.red_zones_hit:
+        return Decision(
+            decision="DENIED",
+            tier=None,
+            score=0.0,
+            red_zones_hit=rr.red_zones_hit,
+            risk_factors_hit=[],
+            obligations=[],
+            reviewers=[],
+            sla_days=None,
+            unknown_paths=rr.unknown_paths,
+            reasons=[f"Red zone {h['id']}: {h['name']}" for h in rr.red_zones_hit],
+            audit=audit,
+        )
+
+    factor_hits, score, unknown_sorted = rr.risk_factors_hit, rr.score, rr.unknown_paths
+
+    # ---- Phase 3: tier selection ------------------------------------------
+    tiers = [t for pack in packs for t in pack.tiers]
+    tier = select_tier(tiers, score)
 
     outcome = {"approved": "APPROVED", "denied": "DENIED", "needs_review": "NEEDS_REVIEW"}[
         tier["outcome"]

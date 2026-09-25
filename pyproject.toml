@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hashimori"
-version = "0.1.0"
-description = "橋守 — a tiny, deterministic rules engine for AI use case governance. Policy in YAML, intake in JSON, decision in milliseconds, with an audit trail."
+version = "0.2.0"
+description = "橋守 — a tiny, deterministic rules engine for AI governance: review AI use cases at design time, enforce agent tool calls at runtime. Policy in YAML, decisions in milliseconds, with an audit trail."
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.9"
 authors = [{ name = "Aakash Yadav" }]
-keywords = ["ai-governance", "grc", "policy-as-code", "rules-engine", "responsible-ai"]
+keywords = ["ai-governance", "grc", "policy-as-code", "rules-engine", "responsible-ai", "ai-agents", "agent-security", "runtime-enforcement", "claude-code", "mcp"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
@@ -32,4 +32,7 @@ Homepage = "https://github.com/OSMoats/hashimori"
 Issues = "https://github.com/OSMoats/hashimori/issues"
 
 [tool.setuptools]
-packages = ["hashimori"]
+packages = ["hashimori", "hashimori.runtime"]
+
+[tool.setuptools.package-data]
+"hashimori.runtime" = ["packs/*.yaml"]

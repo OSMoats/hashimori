@@ -4,6 +4,13 @@
     hashimori validate rulepacks/
     hashimori test tests/decisions.yaml --rules rulepacks/
     hashimori init my-governance/
+
+Runtime (agent tool calls):
+    hashimori check -c "rm -rf build"
+    hashimori hook pre|post          # Claude Code hook entry point
+    hashimori envelope --rules rulepacks/ --context intake.json
+    hashimori learn --audit .hashimori/audit.jsonl
+    hashimori bench
 """
 
 from __future__ import annotations
@@ -264,7 +271,7 @@ def cmd_init(args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="hashimori",
-        description="A tiny, deterministic rules engine for AI use case governance.",
+        description="A tiny, deterministic rules engine for AI governance — at design time and at runtime.",
     )
     parser.add_argument("--version", action="version", version=f"hashimori {__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -291,6 +298,9 @@ def main(argv: list[str] | None = None) -> int:
     p_init = sub.add_parser("init", help="Scaffold a governance workspace")
     p_init.add_argument("dir", nargs="?", default="governance")
     p_init.set_defaults(func=cmd_init)
+
+    from hashimori.runtime.cli_runtime import register as register_runtime
+    register_runtime(sub)
 
     args = parser.parse_args(argv)
     return args.func(args)

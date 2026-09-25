@@ -1,0 +1,27 @@
+# Operator-owned registry for protocol tools (MCP, function calling).
+# MCP servers can self-declare readOnlyHint / destructiveHint, but the spec
+# says clients MUST treat those annotations as untrusted. This file is the
+# trusted mapping from a tool to its effect; {arg} placeholders are filled
+# from the call's actual arguments, per call.
+#
+#   verb: read | write | delete | exec | egress | delegate
+#   sensitivity: 0 public · 1 internal · 2 confidential · 3 restricted
+tools:
+  support_get_ticket:
+    verb: read
+    object: "ticket:{ticket_id}"
+    sensitivity: 1
+    reversible: true
+    tags: [untrusted_source]      # customers write tickets — so can attackers
+  crm_lookup_customer:
+    verb: read
+    object: "crm:customer/{customer_id}"
+    sensitivity: 2
+    reversible: true
+    tags: [pii]
+  chat_post_message:
+    verb: egress
+    object: "chat:#{channel}"
+    external: true
+    reversible: false
+    tags: [upload]

@@ -38,10 +38,28 @@ never open.
 **The engine itself:**
 
 - No dynamic code execution — no `eval`, `exec`, pickle, or plugin loading.
-- No network calls, no model calls, no telemetry. Evaluation is a pure
-  function of (packs, context).
-- YAML is parsed exclusively with `yaml.safe_load`; documents are hashed
-  with SHA-256 for the audit record.
+- The engine makes no network calls, no model calls, no telemetry.
+  Evaluation is a pure function of (packs, context).
+- YAML is parsed only with PyYAML's safe loaders (`SafeLoader` /
+  `CSafeLoader`); documents are hashed with SHA-256 for the audit record.
+
+**Runtime (0.2+).** `hashimori.runtime` wraps the pure engine with state and
+I/O: a local SQLite ledger (session taint + risk budget), an append-only
+JSONL audit log, the Claude Code hook adapter, and an optional resident
+server bound to 127.0.0.1. Its guarantees:
+
+- **Fail closed.** Any internal error in the hook returns `ask` (or `deny`
+  with `HASHIMORI_ON_ERROR=deny`). Claude Code itself treats crashed hooks as
+  non-blocking, so the shipped settings add a shell `|| echo <deny>` fallback.
+- **Monotonic.** Session taint only rises; model signals only add price.
+- **The judge is opt-in** (`HASHIMORI_JUDGE=jev`). When enabled, the tool call
+  text and the user's latest request — redacted for obvious secrets — are sent
+  to the judge's API. Treat enabling it as an egress decision. A hard spend
+  cap (`HASHIMORI_JUDGE_BUDGET_USD`, default $2) stops calls; a stopped judge
+  fails closed.
+- **Scope.** Runtime rules see what the agent *asks* to run, not what code
+  does once running (see `test_known_gap_write_then_execute`). Use an OS
+  sandbox and scoped credentials alongside it.
 - One runtime dependency (PyYAML). Dependencies are monitored by
   Dependabot.
 

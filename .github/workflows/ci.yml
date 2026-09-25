@@ -22,6 +22,8 @@ jobs:
       - name: Unit tests
         run: pytest -q
       - name: Rule packs validate
-        run: hashimori validate rulepacks/
+        run: hashimori validate rulepacks/ hashimori/runtime/packs/agent-runtime.yaml
+      - name: Runtime demo scenes (deterministic)
+        run: for i in 1 2 3 4 5 6 7 8; do ./demo/replay.sh $i > /dev/null; done
       - name: Policy decision tests
         run: hashimori test examples/tests/decisions.yaml --rules rulepacks/
