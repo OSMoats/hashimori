@@ -21,3 +21,7 @@ demo/workspace/.claude/
 demo/workspace/.mcp.json
 demo/results/
 !demo/workspace/build/
+
+# evaluation data (third-party datasets; not redistributed)
+demo/eval/data/
+demo/eval/results/

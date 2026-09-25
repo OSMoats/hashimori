@@ -31,6 +31,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from hashimori.runtime.codecaps import effects_from_code, script_effects
+
 PUBLIC, INTERNAL, CONFIDENTIAL, RESTRICTED = 0, 1, 2, 3
 
 
@@ -73,6 +75,8 @@ PATH_TAGS: list[tuple[str, list[str]]] = [
         "**/.env", "**/.env.*", "~/.ssh", "~/.ssh/**", "~/.aws", "~/.aws/**", "~/.config/gh",
         "~/.config/gh/**", "~/.gnupg", "~/.gnupg/**", "~/.kube/config", "~/.docker/config.json",
         "**/.netrc", "**/*.pem", "**/id_rsa*", "**/id_ed25519*", "**/secrets", "**/secrets/**", "**/*.key",
+        "/etc/shadow", "/etc/gshadow", "/etc/sudoers", "/etc/sudoers.d/**", "/etc/ssl/private/**",
+        "/root", "/root/**", "/proc/*/environ", "~/.bash_history", "~/.zsh_history",
     ]),
     ("vcs_control", ["**/.git/hooks/**", "**/.git/config"]),
     ("persistence", [
@@ -208,6 +212,10 @@ def _positional(args: list[str]) -> list[str]:
 
 def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
     effects: list[Effect] = []
+    # Newlines separate commands (multi-line Bash calls, script files). Drop comment lines first.
+    if "\n" in command:
+        command = " ; ".join(ln for ln in command.splitlines()
+                             if ln.strip() and not ln.lstrip().startswith("#"))
     for rx, tag in OBFUSCATION:
         if rx.search(command):
             effects.append(Effect(verb=None, object=command[:200], surface="shell",
@@ -257,6 +265,13 @@ def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
         args = argv[1:]
         pos = _positional(args)
 
+        if cmd in SHELLS and "-c" not in args:
+            derived = script_effects(argv, cwd, depth)
+            if derived is not None:
+                effects.append(Effect("exec", " ".join(argv)[:120], "shell", reversible=True,
+                                      tags=tags + ["project_exec", "script_inspected"]))
+                effects += derived
+                continue
         if cmd in SHELLS and "-c" in args:
             inner = args[args.index("-c") + 1] if args.index("-c") + 1 < len(args) else ""
             if depth < 3 and inner:
@@ -267,7 +282,17 @@ def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
         if any((cmd, a) in INTERPRETERS_INLINE for a in args[:1]):
             effects.append(Effect(verb=None, object=" ".join(argv)[:200], surface="shell",
                                   resolved=False, tags=["interpreter_inline"] + tags))
+            if cmd.startswith("python") and len(args) > 1 and depth < 3:
+                effects += effects_from_code(args[1], "python", cwd, "inline", depth)  # can only add
             continue
+        if argv[0].startswith(("./", "/")) and os.path.basename(argv[0]).endswith((".py", ".sh")) \
+                or (cmd.startswith("python") and "-c" not in args):
+            derived = script_effects(argv, cwd, depth)
+            if derived is not None:
+                effects.append(Effect("exec", " ".join(argv)[:120], "shell", reversible=True,
+                                      tags=tags + ["project_exec", "script_inspected"]))
+                effects += derived
+                continue
         if cmd == "SUBST" or cmd.startswith("SUBST"):
             continue
         if cmd in BUILTINS_NOOP and not (cmd == "set" and not args):
@@ -444,7 +469,21 @@ def _domain(url: str) -> str:
     return m.group(1).lower() if m else (url or "<unknown-host>")
 
 
+def _dedupe(effects: list[Effect]) -> list[Effect]:
+    seen, out = set(), []
+    for e in effects:
+        key = (e.verb, e.object, e.resolved, tuple(sorted(e.tags)))
+        if key not in seen:
+            seen.add(key)
+            out.append(e)
+    return out
+
+
 def lift_call(tool: str, tool_input: dict, cwd: str, registry: dict | None = None) -> list[Effect]:
+    return _dedupe(_lift_call(tool, tool_input, cwd, registry))
+
+
+def _lift_call(tool: str, tool_input: dict, cwd: str, registry: dict | None = None) -> list[Effect]:
     ti = tool_input or {}
     if tool == "Bash":
         return lift_shell(str(ti.get("command", "")), cwd) or \
