@@ -47,7 +47,10 @@ def make_handler(gate: Gate, home: Path, mode: str, grant: bool):
                 payload = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
                 with lock:
                     if self.path.startswith("/post"):
-                        gate.observe(payload)
+                        res = gate.observe(payload)
+                        if res.get("note_for_agent"):
+                            return self._send({"hookSpecificOutput": {"hookEventName": "PostToolUse",
+                                                                      "additionalContext": res["note_for_agent"]}})
                         return self._send(None)
                     v = gate.decide(payload)
                     with open(home / "audit.jsonl", "a", encoding="utf-8") as fh:

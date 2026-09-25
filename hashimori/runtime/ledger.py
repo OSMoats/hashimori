@@ -39,6 +39,9 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE TABLE IF NOT EXISTS pending_asks (
   tool_use_id TEXT PRIMARY KEY, session_id TEXT, created REAL
 );
+CREATE TABLE IF NOT EXISTS pending_notes (
+  tool_use_id TEXT PRIMARY KEY, note TEXT, created REAL
+);
 """
 
 
@@ -133,6 +136,20 @@ class Ledger:
             self.db.execute("ROLLBACK")
             raise
         return approved
+
+    def note(self, tool_use_id: str | None, text: str) -> None:
+        """Something the agent should be told after its call runs (e.g. 'your rm became a move')."""
+        if tool_use_id:
+            self.db.execute("INSERT OR REPLACE INTO pending_notes VALUES (?,?,?)", (tool_use_id, text, time.time()))
+
+    def take_note(self, tool_use_id: str | None) -> str | None:
+        if not tool_use_id:
+            return None
+        row = self.db.execute("SELECT note FROM pending_notes WHERE tool_use_id=?", (tool_use_id,)).fetchone()
+        if row:
+            self.db.execute("DELETE FROM pending_notes WHERE tool_use_id=?", (tool_use_id,))
+            return row[0]
+        return None
 
     def reset(self, session_id: str | None = None) -> None:
         if session_id:

@@ -101,15 +101,15 @@ def _allowlisted(obj: str, patterns: list[str]) -> bool:
     return any(fnmatch.fnmatch(obj.lower(), p.lower()) for p in patterns)
 
 
-_SAFE_TARGET = re.compile(r"^[\w./*?@%+=,:-]+$")
+_SAFE_TARGET = re.compile(r"^[\w./*?@%+=,:\[\]!-]+$")
 
 
-def rewrite_rm(command: str) -> str | None:
+def rewrite_rm(command: str, cwd: str | None = None) -> str | None:
     """Rewrite-before-refuse, only for shell we fully understand: a chain of
     simple commands joined by && or ; where at least one is a plain `rm`.
     Each rm becomes `mkdir -p <trash> && mv -- <targets> <trash>/`.
     Anything with pipes, substitution, redirects, or odd quoting is left alone."""
-    if any(ch in command for ch in "|`$<>(){}\n\\!") or "||" in command:
+    if any(ch in command for ch in "|`$<>(){}\n\\") or "||" in command:
         return None
     parts = re.split(r"(\s*(?:&&|;)\s*)", command.strip())
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -130,6 +130,10 @@ def rewrite_rm(command: str) -> str | None:
             out.append(part)
             continue
         targets = [a for a in argv[1:] if not a.startswith("-")]
+        if cwd:  # absolute paths inside the workspace are fine: make them relative
+            root = os.path.normpath(cwd)
+            targets = [os.path.relpath(t, root) if os.path.isabs(t) and (os.path.normpath(t) + os.sep).startswith(root + os.sep)
+                       and os.path.normpath(t) != root else t for t in targets]
         if not targets or not all(_SAFE_TARGET.match(t) for t in targets):
             return None
         if any(t in ("/", "~", ".", "..") or t.startswith(("/", "~", "..")) for t in targets):
@@ -206,7 +210,7 @@ class Gate:
 
         rewrite = None
         updated_input = None
-        rm_rewrite = rewrite_rm(str(tool_input.get("command", ""))) if tool == "Bash" else None
+        rm_rewrite = rewrite_rm(str(tool_input.get("command", "")), cwd) if tool == "Bash" else None
 
         def build(effs: list[Effect], simple_rm: bool) -> tuple[dict, dict]:
             reads = [e for e in effs if e.verb == "read"]
@@ -309,6 +313,11 @@ class Gate:
         if commit:
             after = ledger.commit(session_id, decision, price, raise_sens, untrusted, sources,
                                   payload.get("tool_use_id"))
+            if rewrite and decision != "deny":
+                ledger.note(payload.get("tool_use_id"),
+                            f"hashimori rewrote your command before it ran: `{rewrite['from']}` became "
+                            f"`{rewrite['to']}`. Nothing was deleted; the files are in .hashimori-trash/ "
+                            "and a human can restore them with `hashimori restore`.")
         timings["ledger"] = (time.perf_counter() - tl) * 1e6
         timings["total"] = (time.perf_counter() - t0) * 1e6
 
@@ -348,11 +357,12 @@ class Gate:
         resp = payload.get("tool_response")
         text = resp if isinstance(resp, str) else json.dumps(resp or "")[:200_000]
         secret = bool(SECRET_CONTENT.search(text))
+        note = self.ledger(cwd).take_note(payload.get("tool_use_id"))
         approved = self.ledger(cwd).observe_completion(
             payload.get("session_id") or "no-session", payload.get("tool_use_id"),
             raise_sensitivity=3 if secret else 0,
             source=f"{payload.get('tool_name')}:output-contained-secret" if secret else None)
-        return {"human_approved": approved, "secret_in_output": secret}
+        return {"human_approved": approved, "secret_in_output": secret, "note_for_agent": note}
 
 
 def input_fingerprint(tool: str, tool_input: dict) -> str:

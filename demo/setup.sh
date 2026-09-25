@@ -53,7 +53,7 @@ DENY_JSON='{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecisi
 
 if [[ "$FAST" == 1 ]]; then
   PRE_CMD="curl -sf --max-time 5 -H 'content-type: application/json' --data-binary @- http://127.0.0.1:8787/pre || echo '$DENY_JSON'"
-  POST_CMD="curl -sf --max-time 5 -H 'content-type: application/json' --data-binary @- http://127.0.0.1:8787/post > /dev/null || true"
+  POST_CMD="curl -sf --max-time 5 -H 'content-type: application/json' --data-binary @- http://127.0.0.1:8787/post || true"
   cat > "$DEMO_DIR/serve.sh" <<SERVE
 #!/usr/bin/env bash
 # Start the resident decision point for --fast hooks. Leave it running in its own terminal.

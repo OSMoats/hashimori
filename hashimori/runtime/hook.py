@@ -72,6 +72,10 @@ def post(payload: dict) -> None:
     from hashimori.runtime.gate import Gate
     from hashimori.runtime.ledger import default_home
     result = Gate().observe(payload)
+    if result.get("note_for_agent"):
+        # PostToolUse additionalContext is what reaches the model (systemMessage only reaches the user)
+        sys.stdout.write(json.dumps({"hookSpecificOutput": {"hookEventName": "PostToolUse",
+                                                            "additionalContext": result["note_for_agent"]}}))
     home = default_home(payload.get("cwd"))
     if result["human_approved"] or result["secret_in_output"]:
         with open(home / "audit.jsonl", "a", encoding="utf-8") as fh:
