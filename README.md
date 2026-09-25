@@ -325,7 +325,7 @@ the most valuable contributions — see [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 [MIT](LICENSE). Built by Aakash Yadav and contributors, in a personal
-capacity. First presented at AI TechWorld 2026.
+capacity.
 
 The [financial-services rule pack](rulepacks/finance/) was built by
 [Tushar Badlani](https://tusharbadlani.studio/), in a personal capacity.
