@@ -1,0 +1,27 @@
+{
+  "use_case": {
+    "name": "Ops Assistant Bot",
+    "description": "A browser-based assistant an ops analyst connected to their SSO session to pull vendor records and draft summaries.",
+    "audience": "internal",
+    "affected_people": 40
+  },
+  "data": {
+    "categories": ["personal_data", "financial_records"]
+  },
+  "model": {
+    "provider": "unreviewed_saas_assistant",
+    "provider_approved": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "identity_registered": false,
+    "owner_assigned": false,
+    "autonomous_actions": false
+  },
+  "observability": {
+    "logging": false,
+    "runtime_monitoring": false
+  }
+}
