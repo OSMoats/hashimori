@@ -81,6 +81,9 @@ PATH_TAGS: list[tuple[str, list[str]]] = [
     ("vcs_control", ["**/.git/hooks/**", "**/.git/config"]),
     ("persistence", [
         "~/.zshrc", "~/.bashrc", "~/.profile", "~/.bash_profile", "~/.zprofile",
+        "**/.bashrc", "**/.zshrc", "**/.profile", "**/.bash_profile", "**/.bash_login", "**/.zprofile",
+        "/etc/profile", "/etc/profile.d/**", "/etc/bash.bashrc", "/etc/rc.local", "/etc/crontab",
+        "/var/spool/cron/**", "**/.ssh/authorized_keys",
         "~/Library/LaunchAgents/**", "/etc/cron*", "/etc/systemd/**",
     ]),
     ("system", ["/etc/**", "/usr/**", "/bin/**", "/sbin/**", "/System/**", "/Library/**", "/var/**"]),
@@ -118,7 +121,20 @@ def classify_path(raw: str, cwd: str) -> tuple[str, list[str], bool | None, int]
     return p, tags, in_ws, sens
 
 
+DYNAMIC_TARGET = re.compile(r"\$|SUBST|<pipeline>")
+
+
 def _file_effect(verb: str, raw_path: str, cwd: str, surface: str, **kw: Any) -> Effect:
+    if raw_path and DYNAMIC_TARGET.search(raw_path):
+        # The target is only known at run time ($VAR we couldn't resolve, $(...), xargs input).
+        # Reading an unknown file is recorded but allowed; changing one is an unknown → human.
+        extra = kw.pop("extra_tags", [])
+        kw.pop("in_workspace", None)
+        if verb == "read":
+            return Effect(verb="read", object=raw_path, surface=surface, tags=extra + ["dynamic_target"],
+                          reversible=kw.get("reversible", True))
+        return Effect(verb=None, object=raw_path, surface=surface, resolved=False,
+                      tags=extra + ["dynamic_target", f"intended_{verb}"])
     path, tags, in_ws, sens = classify_path(raw_path, cwd)
     return Effect(verb=verb, object=path, surface=surface, sensitivity=sens,
                   in_workspace=in_ws, tags=tags + kw.pop("extra_tags", []), **kw)
@@ -143,14 +159,40 @@ PROJECT_EXEC = {"pytest", "python", "python3", "node", "npm", "npx", "yarn", "pn
                 "true", "false", "test", "[", "git", "pip", "pip3", "hashimori", "sleep", "date"}
 INTERPRETERS_INLINE = {("python", "-c"), ("python3", "-c"), ("node", "-e"), ("perl", "-e"),
                        ("ruby", "-e"), ("php", "-r"), ("osascript", "-e")}
+INLINE_FLAG = re.compile(r"^-[a-zA-Z]*[epn][a-zA-Z]*$")   # perl -pe / -ne / -lane / ruby -ne
 SHELLS = {"sh", "bash", "zsh", "dash", "fish"}
-BUILTINS_NOOP = {"cd", "pushd", "popd", "clear", "history", "alias", "type", "command", "exit",
-                 "wait", "trap", "ulimit", "umask", "read", "true", "false", ":", "set", "shopt",
-                 "ps", "df", "uname", "whoami", "id", "hostname", "uptime", "nproc", "sw_vers", "arch"}
+BUILTINS_NOOP = {"cd", "pushd", "popd", "clear", "history", "alias", "type", "exit", "unset",
+                 "wait", "trap", "ulimit", "umask", "read", "true", "false", ":", "set", "shopt", "jobs",
+                 "fg", "bg", "disown", "shift", "return", "break", "continue", "bind", "hash", "let",
+                 "ps", "df", "uname", "whoami", "id", "hostname", "uptime", "nproc", "sw_vers", "arch",
+                 "seq", "yes", "cal", "bc", "dc", "expr", "who", "w", "last", "lastlog", "finger",
+                 "pstree", "top", "htop", "pgrep", "free", "vmstat", "iostat", "lsof", "netstat", "ss",
+                 "dirname", "basename", "readlink", "tty", "stty", "locale", "groups", "users",
+                 "lscpu", "lsblk", "lsusb", "lspci", "dmesg", "getconf", "factor", "numfmt", "true",
+                 "tput", "logname", "printenv_safe", "whereis", "apropos", "man", "info", "help"}
+STRUCTURE_WORDS = {"do", "then", "else", "elif", "if", "while", "until", "!", "{", "time", "coproc"}
+STRUCTURE_ENDS = {"done", "fi", "esac", "}", ";;", "in"}
+WRAPPERS = {"timeout", "nohup", "nice", "ionice", "time", "watch", "stdbuf", "env", "command",
+            "exec", "builtin", "unbuffer", "caffeinate", "chrt", "taskset", "setsid", "script"}
+FILE_READERS = {"md5sum", "sha1sum", "sha256sum", "sha512sum", "shasum", "cksum", "sum", "rev", "tac",
+                "nl", "fold", "paste", "join", "comm", "column", "zcat", "bzcat", "xzcat", "zgrep",
+                "zless", "hexdump", "iconv", "fmt", "expand", "unexpand", "look", "csplit_ro", "tsort",
+                "pr", "ptx", "cmp", "sdiff", "file", "stat", "du", "identify", "exiftool", "pdftotext"}
+FILE_WRITERS = {"split": "cwd", "csplit": "cwd", "mktemp": "tmp", "rename": "last", "chgrp": "all",
+                "chattr": "all", "setfacl": "all", "truncate_w": "all", "gzip": "all", "gunzip": "all",
+                "bzip2": "all", "bunzip2": "all", "xz": "all", "unxz": "all", "cpio": "cwd",
+                "dos2unix": "all", "unix2dos": "all", "convert": "last", "ssh-keygen": "sshkey"}
+SYSTEM_CHANGE = {"mount", "umount", "sysctl", "ifconfig", "ip", "route", "swapon", "swapoff", "modprobe",
+                 "insmod", "rmmod", "useradd", "userdel", "usermod", "groupadd", "passwd", "chpasswd",
+                 "shutdown", "reboot", "halt", "poweroff", "iptables", "ufw", "nft", "hwclock",
+                 "timedatectl", "hostnamectl", "visudo", "mkfs", "fdisk", "parted", "dd", "losetup"}
 ARCHIVE_WRITE = {"tar", "zip", "unzip", "gzip", "gunzip", "bzip2", "xz", "patch"}
-OPAQUE_RUNNERS = {"xargs", "open", "docker", "kubectl", "terraform", "aws", "gcloud", "az", "crontab",
-                  "launchctl", "systemctl", "osascript", "at"}
-PKG_MANAGERS = {"brew", "apt", "apt-get", "yum", "dnf", "apk", "gem", "cargo"}
+OPAQUE_RUNNERS = {"open", "docker", "kubectl", "terraform", "aws", "gcloud", "az",
+                  "launchctl", "systemctl", "service", "osascript", "at", "batch", "screen", "tmux",
+                  "expect", "sshpass", "fakeroot", "chroot", "nsenter", "unshare", "firejail"}
+PIPELINE_RUNNERS = {"xargs", "parallel"}
+PKG_MANAGERS = {"brew", "apt", "apt-get", "yum", "dnf", "apk", "gem", "cargo", "port", "pacman", "zypper",
+                "snap", "flatpak", "conda", "mamba", "go"}
 PRIV = {"sudo", "doas", "su"}
 GIT_EGRESS = {"push", "fetch", "pull", "clone", "ls-remote"}
 GIT_DESTRUCTIVE = {("reset", "--hard"), ("clean", "-f"), ("clean", "-fd"), ("clean", "-fdx"),
@@ -165,7 +207,8 @@ OBFUSCATION = [
     (re.compile(r"\|\s*(ba|z|da)?sh\b"), "pipe_to_shell"),
     (re.compile(r"(^|[;&|]\s*)eval\b"), "eval"),
 ]
-SUBST_RE = re.compile(r"\$\(([^()]*)\)|`([^`]*)`")
+VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)")
+SUBST_RE = re.compile(r"\$\(([^()]*)\)|`([^`]*)`|[<>]\(([^()]*)\)")
 
 
 def _split_commands(command: str) -> list[list[str]] | None:
@@ -210,7 +253,7 @@ def _positional(args: list[str]) -> list[str]:
     return out
 
 
-def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
+def lift_shell(command: str, cwd: str, depth: int = 0, env: dict | None = None) -> list[Effect]:
     effects: list[Effect] = []
     # Newlines separate commands (multi-line Bash calls, script files). Drop comment lines first.
     if "\n" in command:
@@ -221,21 +264,32 @@ def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
             effects.append(Effect(verb=None, object=command[:200], surface="shell",
                                   resolved=False, tags=["obfuscated", tag]))
 
-    # Command substitution: $(...) / `...` runs first — lift it too.
+    # Command/process substitution: $(...), `...`, <(...) run first — lift them too.
     for m in SUBST_RE.finditer(command):
-        inner = m.group(1) or m.group(2) or ""
+        inner = m.group(1) or m.group(2) or m.group(3) or ""
         if inner and depth < 3:
-            sub = lift_shell(inner, cwd, depth + 1)
+            sub = lift_shell(inner, cwd, depth + 1, env)
             for e in sub:
                 e.tags.append("in_substitution")
             effects += sub
 
-    cmds = _split_commands(SUBST_RE.sub("SUBST", command))
+    # find's escaped syntax (\( \) \; ';') would otherwise look like shell operators
+    pre = SUBST_RE.sub("SUBST", command)
+    pre = re.sub(r"\\;|(?<=\s)';'|(?<=\s)\";\"", " HMSEMI ", pre)
+    pre = pre.replace("\\(", " HMLP ").replace("\\)", " HMRP ")
+    cmds = _split_commands(pre)
     if cmds is None:
         return effects + [Effect(verb=None, object=command[:200], surface="shell",
                                  resolved=False, tags=["unparseable"])]
+    env = dict(env) if env is not None else {
+        "HOME": os.path.expanduser("~"), "PWD": cwd or os.getcwd(), "USER": os.environ.get("USER", "user"),
+        "TMPDIR": os.environ.get("TMPDIR", "/tmp")}
+
+    def expand(tok: str) -> str:
+        return VAR_RE.sub(lambda m: env.get(m.group(1) or m.group(2), m.group(0)), tok)
 
     for argv in cmds:
+        argv = [a for a in argv if a not in ("HMLP", "HMRP")]
         # redirections
         # fd duplication ("2>&1", ">&2") is not an argument or a file
         # and fd numbers before a redirect ("2>/dev/null") are not arguments
@@ -243,6 +297,7 @@ def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
                 if not (a in (">&", "<&", "&>", ">&-")
                         or (a.isdigit() and i > 0 and argv[i - 1] in (">&", "<&"))
                         or (a.isdigit() and i + 1 < len(argv) and argv[i + 1].startswith((">", "<"))))]
+        argv = [expand(a) for a in argv]
         for i, tok in enumerate(argv):
             if tok in (">", ">>") and i + 1 < len(argv) and not argv[i + 1].startswith("/dev/"):
                 effects.append(_file_effect("write", argv[i + 1], cwd, "shell", reversible=False))
@@ -250,20 +305,135 @@ def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
                 effects.append(_file_effect("read", argv[i + 1], cwd, "shell", reversible=True))
         argv = [a for i, a in enumerate(argv)
                 if a not in (">", ">>", "<") and not (i > 0 and argv[i - 1] in (">", ">>", "<"))]
+        # shell structure: `for f in *.txt; do rm "$f"; done` → remember f, lift the body
+        while argv and argv[0] in STRUCTURE_WORDS:
+            argv = argv[1:]
+        if argv and argv[0] in ("for", "select") and len(argv) > 1:
+            items = argv[3:] if len(argv) > 2 and argv[2] == "in" else ["$@"]
+            env[argv[1]] = " ".join(items) if len(items) == 1 else (items[0] if items else "$@")
+            continue
+        if argv and (argv[0] in STRUCTURE_ENDS or argv[0] in ("case", "function") or argv[0].endswith("()")):
+            continue
+        # assignments: VAR=value (alone) are remembered; VAR=value cmd … applies to cmd only
+        if argv and argv[0] in ("export", "local", "readonly", "declare", "typeset"):
+            argv = [a for a in argv[1:] if not a.startswith("-")]
+        if argv and all(re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", a) for a in argv):
+            for a in argv:
+                k, v = a.split("=", 1)
+                env[k] = v
+            continue
         # strip env assignments (FOO=bar cmd)
         while argv and re.match(r"^[A-Za-z_][A-Za-z0-9_]*=", argv[0]):
             argv = argv[1:]
         if not argv:
             continue
         tags: list[str] = []
-        while argv and os.path.basename(argv[0]) in PRIV:
-            tags.append("privilege_escalation")
+        # wrappers run their argument: timeout 5 cmd, nohup cmd, nice -n 5 cmd, env X=1 cmd
+        while argv and (os.path.basename(argv[0]) in PRIV or os.path.basename(argv[0]) in WRAPPERS):
+            w = os.path.basename(argv[0])
+            if w in PRIV:
+                tags.append("privilege_escalation")
             argv = argv[1:]
+            while argv and (argv[0].startswith("-") or re.match(r"^\d+[smhd]?$", argv[0])
+                            or (w == "env" and "=" in argv[0])):
+                if argv[0] in ("-n", "-u", "-g", "-c", "-p") and len(argv) > 1 and w != "env":
+                    argv = argv[1:]
+                argv = argv[1:]
         if not argv:
             continue
         cmd = os.path.basename(argv[0])
         args = argv[1:]
         pos = _positional(args)
+
+        if cmd in PIPELINE_RUNNERS:
+            # `… | xargs rm` runs rm on whatever arrives on stdin: the targets are unknown.
+            inner = [a for a in args if not a.startswith("-")]
+            opt_with_val = {"-I", "-n", "-P", "-L", "-d", "-E", "-s", "--max-args", "-j"}
+            skip, inner = False, []
+            for a in args:
+                if skip:
+                    skip = False
+                    continue
+                if a in opt_with_val:
+                    skip = True
+                    continue
+                if a.startswith("-") and not inner:
+                    continue
+                inner.append(a)
+            if not inner:
+                inner = ["echo"]
+            placeholder = [a.replace("{}", "<pipeline>") for a in inner]
+            if not any("<pipeline>" in a for a in placeholder):
+                placeholder.append("<pipeline>")
+            if depth < 3:
+                effects += lift_shell(" ".join(shlex.quote(a) for a in placeholder), cwd, depth + 1, env)
+            continue
+        if cmd == "find":
+            roots = []
+            for a in args:
+                if a.startswith("-") or a in ("!", "HMSEMI"):
+                    break
+                roots.append(a)
+            roots = roots or ["."]
+            for r in roots:
+                effects.append(_file_effect("read", r, cwd, "shell", reversible=True, extra_tags=tags + ["find"]))
+            if "-delete" in args:
+                for r in roots:
+                    effects.append(_file_effect("delete", r, cwd, "shell", reversible=False, blast=100,
+                                                extra_tags=tags))
+            for flag in ("-exec", "-execdir", "-ok", "-okdir"):
+                idx = [i for i, a in enumerate(args) if a == flag]
+                for i in idx:
+                    body = []
+                    for a in args[i + 1:]:
+                        if a in ("HMSEMI", "+", ";"):
+                            break
+                        body.append(a)
+                    if body and depth < 3:
+                        root = roots[0].rstrip("/") or "/"
+                        sub = [b.replace("{}", f"{root}/*") for b in body]
+                        effects += lift_shell(" ".join(shlex.quote(b) for b in sub), cwd, depth + 1, env)
+            continue
+        if cmd in ("perl", "ruby") and any(INLINE_FLAG.match(a) for a in args[:2]):
+            effects.append(Effect(verb=None, object=" ".join(argv)[:200], surface="shell",
+                                  resolved=False, tags=["interpreter_inline"] + tags))
+            continue
+        if cmd == "crontab":
+            if "-l" in args:
+                effects.append(Effect("read", "crontab", "shell", reversible=True, tags=tags))
+            else:
+                effects.append(Effect("write", "crontab", "shell", reversible=False,
+                                      tags=tags + ["persistence"]))
+            continue
+        if cmd in SYSTEM_CHANGE:
+            readonly = (cmd in ("ifconfig", "ip", "route", "mount", "sysctl") and len(pos) <= 1
+                        and not any(a in ("-w", "add", "del", "delete", "set", "down", "up") for a in args))
+            if readonly:
+                effects.append(Effect("read", cmd, "shell", reversible=True, tags=tags + ["benign_read"]))
+            else:
+                effects.append(Effect("exec", " ".join(argv)[:120], "shell", reversible=False, blast=100,
+                                      tags=tags + ["system_change"]))
+            continue
+        if cmd in FILE_READERS:
+            for target in pos or ["<stdin>"]:
+                if target == "<stdin>":
+                    effects.append(Effect("read", cmd, "shell", reversible=True, tags=tags + ["benign_read"]))
+                else:
+                    effects.append(_file_effect("read", target, cwd, "shell", reversible=True, extra_tags=tags))
+            continue
+        if cmd in FILE_WRITERS:
+            how = FILE_WRITERS[cmd]
+            if how == "sshkey":
+                effects.append(_file_effect("write", "~/.ssh/id_generated", cwd, "shell", reversible=False,
+                                            extra_tags=tags))
+            elif how == "tmp":
+                effects.append(Effect("write", "/tmp/<mktemp>", "shell", reversible=True, in_workspace=False,
+                                      tags=tags + ["tempfile"]))
+            else:
+                targets = {"cwd": ["."], "last": pos[-1:], "all": pos}[how] or ["."]
+                for t in targets:
+                    effects.append(_file_effect("write", t, cwd, "shell", reversible=False, extra_tags=tags))
+            continue
 
         if cmd in SHELLS and "-c" not in args:
             derived = script_effects(argv, cwd, depth)
@@ -275,7 +445,7 @@ def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
         if cmd in SHELLS and "-c" in args:
             inner = args[args.index("-c") + 1] if args.index("-c") + 1 < len(args) else ""
             if depth < 3 and inner:
-                effects += lift_shell(inner, cwd, depth + 1)
+                effects += lift_shell(inner, cwd, depth + 1, env)
             else:
                 effects.append(Effect(None, command[:200], "shell", resolved=False, tags=["nested_shell"]))
             continue
@@ -354,6 +524,13 @@ def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
                 elif a in ("-T", "--upload-file") and i + 1 < len(args):
                     effects.append(_file_effect("read", args[i + 1], cwd, "shell", reversible=True,
                                                 extra_tags=["sent"]))
+            # Downloads written to disk: wget -O file, curl -o file / -O
+            for i, a in enumerate(args):
+                if a in ("-O", "--output-document", "-o", "--output") and i + 1 < len(args) and \
+                        not (cmd == "curl" and a == "-O"):
+                    if args[i + 1] != "-":
+                        effects.append(_file_effect("write", args[i + 1], cwd, "shell", reversible=False,
+                                                    extra_tags=["download", "untrusted_source"]))
             if cmd in ("scp", "rsync", "sftp"):
                 for src in [x for x in pos[:-1] if not USERHOST_RE.match(x) or ":" not in x]:
                     effects.append(_file_effect("read", src, cwd, "shell", reversible=True, extra_tags=["sent"]))
@@ -412,13 +589,13 @@ def lift_shell(command: str, cwd: str, depth: int = 0) -> list[Effect]:
             for target in pos[1:]:
                 effects.append(_file_effect("write", target, cwd, "shell", reversible=False, extra_tags=tags))
             continue
-        if cmd == "find" and "-delete" in args:
-            effects.append(_file_effect("delete", pos[0] if pos else ".", cwd, "shell",
-                                        reversible=False, blast=100, extra_tags=tags))
-            continue
 
         if cmd in WRITE_CMDS:
             targets = pos[-1:] if cmd in ("mv", "cp", "ln", "install") else pos
+            if cmd in ("cp", "install", "ln"):
+                for src in pos[:-1]:  # copying *from* a path reads it
+                    effects.append(_file_effect("read", src, cwd, "shell", reversible=True,
+                                                extra_tags=tags + ["copied_from"]))
             if cmd == "mv":
                 for src in pos[:-1]:  # moving *away* from a path removes it there
                     effects.append(_file_effect("write", src, cwd, "shell", reversible=True,

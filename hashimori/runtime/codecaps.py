@@ -40,6 +40,9 @@ EXEC_ATTRS = {"system", "popen", "run", "call", "check_call", "check_output", "P
 DYNAMIC_NAMES = {"eval", "exec", "compile", "__import__"}
 DYNAMIC_ATTRS = {"import_module", "b64decode", "a85decode", "b32decode", "decompress", "loads"}
 KILL_ATTRS = {"kill", "killpg", "terminate"}
+COPY_ATTRS = {"copy", "copy2", "copyfile", "copytree", "move", "rename", "replace", "copyfileobj"}
+LIST_ATTRS = {"listdir", "scandir", "walk", "glob", "iglob", "iterdir", "rglob"}
+MKDIR_ATTRS = {"makedirs", "mkdir"}
 PRIV_ATTRS = {"setuid", "setgid", "seteuid", "setegid", "chown", "chmod", "chroot"}
 WRITE_MODES = re.compile(r"[wax+]")
 URL_RE = re.compile(r"(?i)\b(?:https?|ftp|wss?)://([^/\s:'\"]+)")
@@ -88,6 +91,10 @@ class _Consts:
             if left is not None and right is not None:
                 return os.path.join(left, right) if isinstance(node.op, ast.Div) else left + right
         return None
+
+
+def _pathlike(v) -> bool:
+    return isinstance(v, str) and bool(PATHISH.match(v) or "/" in v or re.search(r"\.[A-Za-z0-9]{1,5}$", v))
 
 
 def analyze_python(src: str) -> dict:
@@ -140,9 +147,33 @@ def analyze_python(src: str) -> dict:
                     (facts["writes"] if writing else facts["reads"]).append(target)
                 elif not writing:
                     facts["read_dynamic"] = True
-            elif attr in DELETE_ATTRS and (root in ("os", "shutil", "pathlib") or isinstance(base, ast.Call)
-                                           or name in ("os.remove", "os.unlink", "shutil.rmtree", "os.rmdir")):
-                target = first if root in ("os", "shutil") else lit(base) if isinstance(base, ast.Call) else first
+            elif attr in COPY_ATTRS and (root in ("shutil", "os") or isinstance(base, (ast.Call, ast.Name))
+                                         and _pathlike(lit(base))):
+                src = first if root in ("shutil", "os") else lit(base)
+                dst = lit(args[1]) if root in ("shutil", "os") and len(args) > 1 else first
+                if src:
+                    facts["reads"].append(src)
+                    if attr in ("move", "rename", "replace"):
+                        facts["deletes"].append(src)  # it's gone from where it was
+                elif attr in ("move", "rename", "replace"):
+                    facts["delete_dynamic"] = True
+                if dst:
+                    facts["writes"].append(dst)
+            elif attr in LIST_ATTRS and (root in ("os", "glob") or isinstance(base, (ast.Call, ast.Name))
+                                         and _pathlike(lit(base))):
+                target = first if root in ("os", "glob") else lit(base)
+                if target:
+                    facts["reads"].append(target)
+            elif attr in MKDIR_ATTRS and (root == "os" or isinstance(base, (ast.Call, ast.Name))
+                                          and _pathlike(lit(base))):
+                target = first if root == "os" else lit(base)
+                if target:
+                    facts["writes"].append(target)
+            elif attr in DELETE_ATTRS and (root in ("os", "shutil") or isinstance(base, (ast.Call, ast.Name))
+                                           and _pathlike(lit(base))):
+                # os.remove(p) / shutil.rmtree(p) / Path("x").unlink() / p.unlink() where p = Path("x").
+                # list.remove(x) on an ordinary variable is NOT a file delete.
+                target = first if root in ("os", "shutil") else lit(base)
                 if target:
                     facts["deletes"].append(target)
                 else:

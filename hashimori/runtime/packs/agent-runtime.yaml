@@ -166,6 +166,17 @@ risk_factors:
      when: {path: effect.verb, is: delegate}}
   - {id: PRICE-011, name: Destination computed at run time, weight: 3,
      when: {path: effect.tags, contains: dynamic_destination}}
+  - {id: PRICE-014, name: System configuration change (mount/network/users/power), weight: 5,
+     when: {path: effect.tags, contains: system_change}}
+  - id: PRICE-015
+    name: Writes into a secret store
+    weight: 5
+    when:
+      all:
+        - {path: effect.verb, in: [write, delete]}
+        - {path: effect.tags, contains: secret_store}
+  - {id: PRICE-016, name: Downloads untrusted content to disk, weight: 2,
+     when: {path: effect.tags, contains: download}}
   - id: PRICE-012
     name: Judge says likely harmful
     weight: 6
