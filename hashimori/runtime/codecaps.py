@@ -176,8 +176,15 @@ def analyze_python(src: str) -> dict:
     return facts
 
 
+def enabled() -> bool:
+    """HASHIMORI_NO_CODE_INSPECT=1 turns inspection off (used for ablation in demo/eval)."""
+    return os.environ.get("HASHIMORI_NO_CODE_INSPECT", "") not in ("1", "true", "yes")
+
+
 def effects_from_code(src: str, lang: str, cwd: str, origin: str, depth: int = 0) -> list:
     """Derive Effect records from source code. Import here to avoid a cycle."""
+    if not enabled():
+        return []
     from hashimori.runtime.effects import Effect, _file_effect, lift_shell
     tag = f"from_code:{origin}"
     out: list = []
@@ -233,7 +240,7 @@ SCRIPT_RUNNERS = {"python": "python", "python3": "python", "python2": "python",
 def script_effects(argv: list[str], cwd: str, depth: int = 0) -> list | None:
     """If argv runs a local script we can read, return its derived effects.
     Returns None when this isn't a script invocation (caller keeps default behaviour)."""
-    if not argv:
+    if not argv or not enabled():
         return None
     cmd = os.path.basename(argv[0])
     lang, path = None, None
