@@ -220,7 +220,7 @@ def cmd_report(args: argparse.Namespace) -> int:
     from hashimori.runtime.report import build_html
     events = fleet.load(args.paths)
     rep = fleet.analyze(events, args.min_sessions, args.window_hours)
-    Path(args.out).write_text(build_html(events, rep, title=args.title))
+    Path(args.out).write_text(build_html(events, rep, title=args.title, brand=not args.plain))
     print(f"wrote {args.out}  ({len(events)} decisions, {len(rep['alerts'])} campaign alert(s))")
     return 0
 
@@ -292,6 +292,7 @@ def register(sub) -> None:
     p.add_argument("paths", nargs="+")
     p.add_argument("--out", default="hashimori-report.html")
     p.add_argument("--title", default="Gatehouse")
+    p.add_argument("--plain", action="store_true", help="no product name (e.g. for slides)")
     p.add_argument("--min-sessions", type=int, default=3)
     p.add_argument("--window-hours", type=float, default=24.0)
     p.set_defaults(func=cmd_report)

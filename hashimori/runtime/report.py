@@ -27,7 +27,7 @@ def _outcome(e):
     return "rewrite" if e.get("decision") == "allow" and e.get("rewrite") else e.get("decision")
 
 
-def build_html(events: list[dict], fleet: dict, title: str = "Gatehouse") -> str:
+def build_html(events: list[dict], fleet: dict, title: str = "Gatehouse", brand: bool = True) -> str:
     esc = html.escape
     n = len(events)
     mix = Counter(_outcome(e) for e in events)
@@ -125,7 +125,7 @@ td.num{{text-align:right;font-variant-numeric:tabular-nums}}code{{font:13px "Jet
 .chip{{color:#fff;border-radius:10px;padding:1px 8px;font-size:12px}}.two{{display:grid;grid-template-columns:1fr 2fr;gap:16px}}
 @media (max-width:760px){{.two{{grid-template-columns:1fr}}}}
 </style></head><body><main>
-<h1>🌉 {esc(title)}</h1><div class="sub">Hashimori Runtime · {n:,} decisions from {len(sessions)} sessions on {len(hosts)} hosts</div>
+<h1>{'🌉 ' if brand else ''}{esc(title)}</h1><div class="sub">{'Hashimori Runtime · ' if brand else ''}{n:,} decisions from {len(sessions)} sessions on {len(hosts)} hosts</div>
 <div class="kpis"><div class="kpi"><b>{n:,}</b>tool calls decided</div>
 <div class="kpi"><b>{100 * (mix.get('allow', 0) + mix.get('rewrite', 0)) / max(1, n):.0f}%</b>ran without a human</div>
 <div class="kpi"><b>{mix.get('deny', 0):,}</b>denied</div><div class="kpi"><b>{mix.get('ask', 0):,}</b>asked a human</div>
