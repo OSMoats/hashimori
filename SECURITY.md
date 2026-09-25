@@ -52,11 +52,14 @@ server bound to 127.0.0.1. Its guarantees:
   with `HASHIMORI_ON_ERROR=deny`). Claude Code itself treats crashed hooks as
   non-blocking, so the shipped settings add a shell `|| echo <deny>` fallback.
 - **Monotonic.** Session taint only rises; model signals only add price.
-- **The judge is opt-in** (`HASHIMORI_JUDGE=jev`). When enabled, the tool call
-  text and the user's latest request — redacted for obvious secrets — are sent
-  to the judge's API. Treat enabling it as an egress decision. A hard spend
-  cap (`HASHIMORI_JUDGE_BUDGET_USD`, default $2) stops calls; a stopped judge
-  fails closed.
+- **The judge is opt-in** (`HASHIMORI_JUDGE=http|jev`). When enabled, the tool
+  call text and the user's latest request — redacted for obvious secrets — are
+  sent to the configured judge. Treat enabling a remote judge as an egress
+  decision; prefer a local model behind the `http` adapter for sensitive
+  environments. Adapters come from a fixed built-in table (no plugin loading);
+  the `http` adapter only accepts http(s) URLs. Malformed answers are discarded.
+  A hard spend cap (`HASHIMORI_JUDGE_BUDGET_USD`, default $2) stops calls; a
+  stopped judge fails closed.
 - **Scope.** Runtime rules see what the agent *asks* to run. Local scripts (and
   their local imports) are read before they run, but installed packages,
   obfuscated or data-dependent code, and files changed between check and run

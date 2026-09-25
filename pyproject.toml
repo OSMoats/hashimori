@@ -32,11 +32,10 @@ Homepage = "https://github.com/OSMoats/hashimori"
 Issues = "https://github.com/OSMoats/hashimori/issues"
 
 [tool.setuptools]
-packages = ["hashimori", "hashimori.runtime"]
+packages = ["hashimori", "hashimori.runtime", "hashimori.runtime.judges"]
 
 [tool.setuptools.package-data]
 "hashimori.runtime" = ["packs/*.yaml"]
 
 [tool.pytest.ini_options]
-# demo/workspace/tests has a deliberate bug for the demo agent to find; not part of the suite.
 testpaths = ["tests"]

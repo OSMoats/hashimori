@@ -19,7 +19,7 @@ Environment:
     HASHIMORI_RULES     runtime pack dir (default: packs bundled with hashimori)
     HASHIMORI_HOME      ledger + audit dir (default: <project>/.hashimori)
     HASHIMORI_ENVELOPE  envelope.json from `hashimori envelope`
-    HASHIMORI_JUDGE=jev + TYPESAFE_API_KEY  enable the optional semantic judge
+    HASHIMORI_JUDGE     http | jev — enable the optional model judge (see runtime/judge.py)
 """
 
 from __future__ import annotations
