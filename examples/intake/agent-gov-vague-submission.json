@@ -1,0 +1,12 @@
+{
+  "use_case": {
+    "name": "New Agent Pilot",
+    "description": "Early pilot; identity registration and access review details are still being worked out."
+  },
+  "data": {
+    "categories": ["operational_data"]
+  },
+  "model": {
+    "provider": "unnamed_vendor"
+  }
+}

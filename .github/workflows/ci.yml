@@ -38,3 +38,5 @@ jobs:
         run: hashimori test examples/tests/healthcare-decisions.yaml --rules rulepacks/red-zone rulepacks/healthcare
       - name: Finance pack decision tests
         run: hashimori test examples/tests/finance-decisions.yaml --rules rulepacks/red-zone rulepacks/finance
+      - name: AI agent governance pack decision tests
+        run: hashimori test examples/tests/ai-agent-governance-decisions.yaml --rules rulepacks/red-zone rulepacks/ai-agent-governance rulepacks/baseline

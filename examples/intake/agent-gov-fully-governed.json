@@ -1,0 +1,39 @@
+{
+  "use_case": {
+    "name": "Internal Docs Answerbot (Governed)",
+    "description": "Same RAG assistant as the baseline fast-track example, with its agent identity fully registered, owned, scoped, and reviewed.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["rag_search"],
+    "subjects": [],
+    "affected_people": 900
+  },
+  "data": {
+    "categories": ["public", "internal_docs"]
+  },
+  "model": {
+    "provider": "self_hosted",
+    "provider_approved": true,
+    "provider_assessed": true,
+    "trains_on_customer_data": false
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "identity_registered": true,
+    "owner_assigned": true,
+    "owner_active": true,
+    "can_originate_and_approve": false,
+    "delegation_traceable": true,
+    "delegation_depth": 0,
+    "access_time_bound": true,
+    "last_access_review_days": 10,
+    "autonomous_actions": false,
+    "irreversible_effects": false
+  },
+  "observability": {
+    "logging": true,
+    "runtime_monitoring": true
+  }
+}

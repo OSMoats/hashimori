@@ -1,0 +1,34 @@
+{
+  "use_case": {
+    "name": "Loan Adjustment Orchestrator",
+    "description": "Proposes a change to a customer's credit terms and, in the same run, signs off on its own proposal. A human reviews the batch afterward, but no second identity sits in the approval step itself.",
+    "audience": "external",
+    "decision_impact": "credit",
+    "capabilities": ["decisioning"],
+    "subjects": ["customers"],
+    "affected_people": 5000
+  },
+  "data": {
+    "categories": ["personal_data", "credit_report_data"]
+  },
+  "model": {
+    "provider": "approved_fintech_vendor",
+    "provider_approved": true
+  },
+  "oversight": {
+    "human_in_loop": true
+  },
+  "agent": {
+    "identity_registered": true,
+    "owner_assigned": true,
+    "owner_active": true,
+    "can_originate_and_approve": true,
+    "delegation_traceable": true,
+    "autonomous_actions": true,
+    "irreversible_effects": false
+  },
+  "observability": {
+    "logging": true,
+    "runtime_monitoring": true
+  }
+}
