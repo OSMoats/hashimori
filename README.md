@@ -176,6 +176,13 @@ algorithmic trading, robo-advice, and third-party cardholder-data patterns:
 six red zones and eight risk factors mapped to `DORA`, `APRA:CPS230`/`CPS234`,
 `PCI-DSS`, `ECOA`/`Reg B`, `FCRA`, `SR-11-7`, `SEC`, and `FINRA`.
 
+Cross-cutting instead of industry-specific: [`rulepacks/ai-agent-governance`](rulepacks/ai-agent-governance/)
+governs the agent's identity rather than its industry — is it registered
+with an accountable owner, is its access scoped and reviewed like any other
+privileged identity, can its actions trace back to who authorized them. It
+defines no tiers of its own, so load it alongside `red-zone` and whichever
+tiered pack fits (`baseline`, or an industry pack).
+
 ## What Hashimori is not
 
 - **Not a GRC platform.** It's the ~600-line decision core that platforms
@@ -233,5 +240,6 @@ the most valuable contributions — see [CONTRIBUTING.md](CONTRIBUTING.md).
 [MIT](LICENSE). Built by Aakash Yadav and contributors, in a personal
 capacity. First presented at AI TechWorld 2026.
 
-The [financial-services rule pack](rulepacks/finance/) was built by
-[Tushar Badlani](https://tusharbadlani.studio/), in a personal capacity.
+The [financial-services](rulepacks/finance/) and
+[AI agent governance](rulepacks/ai-agent-governance/) rule packs were built
+by [Tushar Badlani](https://tusharbadlani.studio/), in a personal capacity.
