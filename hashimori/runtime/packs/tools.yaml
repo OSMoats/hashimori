@@ -1,0 +1,20 @@
+# Operator-owned registry for protocol tools (MCP, function calling).
+#
+# MCP servers can self-declare readOnlyHint / destructiveHint, but the spec says
+# clients MUST treat those annotations as untrusted. This registry is the
+# trusted mapping from a tool to its effect. A tool that isn't listed here is an
+# *unknown* and asks a human.
+#
+# Ship your own registry next to your policy and point the runtime at it:
+#     hashimori check --tools my-tools.yaml ...      or   HASHIMORI_TOOLS=my-tools.yaml
+# (several files: separate with ':' — ';' on Windows). See examples/runtime/tools.yaml.
+#
+# Entry shape — {arg} placeholders are filled from the call's actual arguments:
+#   <tool_name>:                      # the MCP tool name, without the mcp__<server>__ prefix
+#     verb: read | write | delete | exec | egress | delegate
+#     object: "crm:customer/{customer_id}"
+#     sensitivity: 0 public · 1 internal · 2 confidential · 3 restricted
+#     reversible: true | false
+#     external: true                  # egress leaves your boundary
+#     tags: [untrusted_source, pii, upload]
+tools: {}

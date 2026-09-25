@@ -27,7 +27,11 @@ jobs:
       - name: Unit tests
         run: pytest -q --cov=hashimori --cov-report=term-missing
       - name: Rule packs validate
-        run: hashimori validate rulepacks/
+        run: hashimori validate rulepacks/ hashimori/runtime/packs/agent-runtime.yaml
+      - name: Runtime tour (self-checking decisions)
+        run: bash examples/runtime/tour.sh
+      - name: Runtime benchmark harness (smoke, no datasets)
+        run: python -c "import runpy, sys; sys.argv = ['run_eval', '--help']; runpy.run_path('benchmarks/runtime/run_eval.py', run_name='__main__')" > /dev/null
       - name: Policy decision tests
         run: hashimori test examples/tests/decisions.yaml --rules rulepacks/baseline rulepacks/red-zone
       - name: Healthcare pack decision tests

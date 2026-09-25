@@ -1,7 +1,10 @@
-"""Hashimori — a tiny, deterministic rules engine for AI use case governance.
+"""Hashimori — a tiny, deterministic rules engine for AI governance.
 
-Policy in YAML. Intake in JSON. Decision in milliseconds, with an audit trail.
-No LLM in the decision path. Ever.
+Design time: review AI use cases (intake JSON → decision).
+Runtime: enforce agent tool calls (effects → allow / ask / deny / rewrite).
+Policy in YAML. Decisions in milliseconds, with an audit trail.
+No model can grant: the engine never calls one, and optional model signals
+can only escalate.
 """
 
 from importlib.metadata import PackageNotFoundError, version

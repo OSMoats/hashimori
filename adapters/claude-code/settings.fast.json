@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sf --max-time 5 -H 'content-type: application/json' --data-binary @- http://127.0.0.1:8787/pre || echo '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"hashimori: hook failed to run: failing closed\"}}'",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -sf --max-time 5 -H 'content-type: application/json' --data-binary @- http://127.0.0.1:8787/post || true",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

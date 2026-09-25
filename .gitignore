@@ -11,3 +11,11 @@ dist/
 # local helpers, not part of the public repo
 film-demo.sh
 publish-to-github.sh
+
+# runtime state
+.hashimori/
+.hashimori-trash/
+
+# benchmark data (third-party datasets; not redistributed) and results
+benchmarks/runtime/data/
+benchmarks/runtime/results/

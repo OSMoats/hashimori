@@ -38,10 +38,35 @@ never open.
 **The engine itself:**
 
 - No dynamic code execution — no `eval`, `exec`, pickle, or plugin loading.
-- No network calls, no model calls, no telemetry. Evaluation is a pure
-  function of (packs, context).
-- YAML is parsed exclusively with `yaml.safe_load`; documents are hashed
-  with SHA-256 for the audit record.
+- The engine makes no network calls, no model calls, no telemetry.
+  Evaluation is a pure function of (packs, context).
+- YAML is parsed only with PyYAML's safe loaders (`SafeLoader` /
+  `CSafeLoader`); documents are hashed with SHA-256 for the audit record.
+
+**Runtime (0.3+).** `hashimori.runtime` wraps the pure engine with state and
+I/O: a local SQLite ledger (session taint + risk budget), an append-only
+JSONL audit log, the Claude Code hook adapter, and an optional resident
+server bound to 127.0.0.1. Its guarantees:
+
+- **Fail closed.** Any internal error in the hook returns `ask` (or `deny`
+  with `HASHIMORI_ON_ERROR=deny`). Claude Code itself treats crashed hooks as
+  non-blocking, so the shipped settings add a shell `|| echo <deny>` fallback.
+- **Monotonic.** Session taint only rises; model signals only add price.
+- **The judge is opt-in** (`HASHIMORI_JUDGE=http|jev`). When enabled, the tool
+  call text and the user's latest request — redacted for obvious secrets — are
+  sent to the configured judge. Treat enabling a remote judge as an egress
+  decision; prefer a local model behind the `http` adapter for sensitive
+  environments. Adapters come from a fixed built-in table (no plugin loading);
+  the `http` adapter only accepts http(s) URLs. Malformed answers are discarded.
+  A hard spend cap (`HASHIMORI_JUDGE_BUDGET_USD`, default $2) stops calls; a
+  stopped judge fails closed.
+- **Scope.** Runtime rules see what the agent *asks* to run. Local scripts (and
+  their local imports) are read before they run, but installed packages,
+  obfuscated or data-dependent code, and files changed between check and run
+  are not (see `test_known_gap_installed_packages_are_not_inspected`). Use an
+  OS sandbox and scoped credentials alongside it.
+- **Fleet/report/export** read audit logs you point them at and write local
+  files only. Audit logs contain command text: treat them as sensitive.
 - One runtime dependency (PyYAML). Dependencies are monitored by
   Dependabot.
 

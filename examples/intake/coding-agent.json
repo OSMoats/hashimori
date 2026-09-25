@@ -1,0 +1,23 @@
+{
+  "use_case": {
+    "name": "Repo Maintenance Coding Agent",
+    "description": "Coding agent that fixes failing tests, cleans build artifacts, and triages support tickets for the webhooks service.",
+    "audience": "internal",
+    "decision_impact": "none",
+    "capabilities": ["code_generation", "ticket_triage"],
+    "subjects": ["employees"],
+    "affected_people": 40
+  },
+  "data": {"categories": ["source_code", "customer_records"]},
+  "model": {"provider": "approved_api_vendor", "provider_approved": true, "provider_assessed": true,
+            "trains_on_customer_data": false},
+  "oversight": {"human_in_loop": true},
+  "agent": {
+    "autonomous_actions": true,
+    "irreversible_effects": true,
+    "approval_gate": true,
+    "rollback_plan": true,
+    "allowed_egress": ["chat:#eng-builds", "docs.python.org"]
+  },
+  "observability": {"logging": true}
+}

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass, field
+from functools import cached_property
 from pathlib import Path
 from typing import Any
 
@@ -25,15 +26,18 @@ class Pack:
     tiers: list[dict] = field(default_factory=list)
     raw: dict = field(default_factory=dict)
 
-    @property
+    @cached_property
     def sha256(self) -> str:
+        # Cached: packs are immutable once loaded. Recomputing this on every
+        # evaluation cost ~3.3 ms (99% of evaluate()) — fine for use-case
+        # review, 100x too slow for per-tool-call runtime enforcement.
         canonical = yaml.safe_dump(self.raw, sort_keys=True).encode()
         return hashlib.sha256(canonical).hexdigest()
 
 
 def _load_yaml(path: Path) -> dict:
     with open(path, "r", encoding="utf-8") as fh:
-        data = yaml.safe_load(fh)
+        data = yaml.load(fh, Loader=getattr(yaml, "CSafeLoader", yaml.SafeLoader))
     if not isinstance(data, dict):
         raise ValueError(f"{path}: top level must be a mapping")
     return data
