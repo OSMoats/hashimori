@@ -1,0 +1,95 @@
+version: 1
+pack:
+  name: ai-agent-governance
+  description: >
+    Cross-industry agent identity and governance controls — red zones and
+    risk factors for how an agent is registered, who is accountable for it,
+    and whether its access is scoped and reviewed like any other privileged
+    identity. Carries no tiers, so it composes freely alongside red-zone and
+    whichever tiered pack fits your industry (baseline, finance, healthcare,
+    ...). See README.md for composition and the vocabulary it reads.
+
+red_zones:
+  - id: AG-RZ-001
+    name: Unregistered agent touching non-public data
+    when:
+      all:
+        - path: agent.identity_registered
+          is: false
+        - path: agent.owner_assigned
+          is: false
+        - path: data.categories
+          not_in: [public]
+    message: >
+      An agent with no registered identity and no accountable owner is not a
+      risk to be scored, it is a gap in the inventory. Nothing should reach
+      non-public data through an identity nobody is answerable for.
+    remedy: >
+      Register the agent with a verified identity and name an accountable
+      owner before it is allowed near non-public data, then resubmit.
+    refs: [NIST-AI-RMF:GOVERN-1.1, ISO-42001:A.3.2]
+
+  - id: AG-RZ-002
+    name: Same agent originates and approves the same consequential action
+    when:
+      all:
+        - path: agent.can_originate_and_approve
+          is: true
+        - path: use_case.decision_impact
+          in: [credit, employment, housing, insurance, medical, legal, law_enforcement, education_access]
+    message: >
+      One identity, human or agent, generating and then approving its own
+      consequential action removes the second set of eyes the approval step
+      exists to provide. This applies to agents exactly as it applies to
+      people.
+    remedy: >
+      Split origination and approval across two distinct identities (a
+      second agent, or a human), then resubmit.
+    refs: [NIST-AI-RMF:GOVERN-1.1, ISO-42001:A.9.3]
+
+  - id: AG-RZ-003
+    name: Untraceable delegation chain with no human in the loop
+    when:
+      all:
+        - path: agent.delegation_traceable
+          is: false
+        - path: oversight.human_in_loop
+          is: false
+    message: >
+      When a sub-agent's actions cannot be traced back to the human or
+      process that authorized the chain, and no human sits in that loop
+      either, there is no one to hold accountable for what the chain did.
+    remedy: >
+      Make every hop of the delegation chain carry a link back to its
+      authorizing human or process, or add a human-in-the-loop checkpoint,
+      then resubmit.
+    refs: [NIST-AI-RMF:GOVERN-1.1]
+
+risk_factors:
+  - id: AG-RISK-001
+    name: Standing access rather than a scoped, expiring grant
+    when: {path: agent.access_time_bound, is: false}
+    weight: 2
+    refs: [ISO-42001:A.9.2]
+
+  - id: AG-RISK-002
+    name: Entitlements not reviewed in the last quarter
+    when: {path: agent.last_access_review_days, gte: 90}
+    weight: 2
+
+  - id: AG-RISK-003
+    name: Accountable owner no longer active in their role
+    when: {path: agent.owner_active, is: false}
+    weight: 3
+    refs: [NIST-AI-RMF:GOVERN-1.1]
+
+  - id: AG-RISK-004
+    name: Deep sub-agent delegation chain (three or more hops)
+    when: {path: agent.delegation_depth, gte: 3}
+    weight: 2
+
+  - id: AG-RISK-005
+    name: No runtime behavioral monitoring planned for this agent
+    when: {path: observability.runtime_monitoring, is: false}
+    weight: 2
+    refs: [ISO-42001:A.6.2.8]
