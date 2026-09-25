@@ -68,7 +68,8 @@ class Verdict:
 class RuntimeConfig:
     """Runtime packs + tool registry + envelope, loaded once per process."""
 
-    def __init__(self, rules_dir: str | Path | None = None, envelope_path: str | Path | None = None):
+    def __init__(self, rules_dir: str | Path | None = None, envelope_path: str | Path | None = None,
+                 tools: str | Path | list | None = None):
         rules_dir = Path(rules_dir or os.environ.get("HASHIMORI_RULES") or PACK_DIR)
         self.packs: list[Pack] = []
         self.registry: dict = {"tools": {}}
@@ -86,6 +87,14 @@ class RuntimeConfig:
                         raw_merged.setdefault(key, []).extend(data[key])
                     else:
                         raw_merged.setdefault(key, {}).update(data[key])
+        # Extra tool registries: your MCP / function-calling tools (see packs/tools.yaml).
+        if tools is None:
+            tools = [p for p in os.environ.get("HASHIMORI_TOOLS", "").split(os.pathsep) if p]
+        for tf in ([tools] if isinstance(tools, (str, Path)) else tools):
+            data = yaml.load(Path(tf).read_text(), Loader=_Loader) or {}
+            if not isinstance(data.get("tools"), dict):
+                raise ValueError(f"{tf}: expected a top-level 'tools:' mapping")
+            self.registry["tools"].update(data["tools"])
         self.rewrites = raw_merged.get("rewrites", [])
         self.budget = {"per_call": 7, "session": 20, **raw_merged.get("budget", {})}
         self.judge_when = (raw_merged.get("judge") or {}).get("consult_when")

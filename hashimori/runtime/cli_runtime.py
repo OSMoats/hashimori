@@ -89,7 +89,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     payload.setdefault("session_id", args.session)
     if args.agent:
         payload["agent_type"] = args.agent
-    gate = Gate(RuntimeConfig(args.rules, args.envelope), home=args.home)
+    gate = Gate(RuntimeConfig(args.rules, args.envelope, args.tools or None), home=args.home)
     v = gate.decide(payload, commit=not args.dry_run, use_judge=True if args.judge else None)
     if args.json:
         from hashimori.runtime.gate import audit_line
@@ -227,7 +227,7 @@ def cmd_report(args: argparse.Namespace) -> int:
 
 def cmd_serve(args: argparse.Namespace) -> int:
     from hashimori.runtime.serve import serve
-    serve(args.port, args.home, args.rules, args.envelope)
+    serve(args.port, args.home, args.rules, args.envelope, args.tools or None)
     return 0
 
 
@@ -241,8 +241,10 @@ def register(sub) -> None:
     p.add_argument("--agent", help="Simulate a sub-agent call (agent_type)")
     p.add_argument("--rules", help="Runtime pack dir (default: bundled)")
     p.add_argument("--envelope", help="envelope.json from `hashimori envelope`")
+    p.add_argument("--tools", action="append", help="MCP/protocol tool registry YAML (repeatable; "
+                   "default: $HASHIMORI_TOOLS)")
     p.add_argument("--home", help="Ledger/audit dir (default ./.hashimori)")
-    p.add_argument("--judge", action="store_true", help="Consult the semantic judge if configured")
+    p.add_argument("--judge", action="store_true", help="Consult the model judge if one is configured (HASHIMORI_JUDGE)")
     p.add_argument("--dry-run", action="store_true", help="Don't update the session ledger")
     p.add_argument("--json", action="store_true")
     p.add_argument("--exit-code", action="store_true")
@@ -292,7 +294,7 @@ def register(sub) -> None:
     p.add_argument("paths", nargs="+")
     p.add_argument("--out", default="hashimori-report.html")
     p.add_argument("--title", default="Gatehouse")
-    p.add_argument("--plain", action="store_true", help="no product name (e.g. for slides)")
+    p.add_argument("--plain", action="store_true", help="omit the product name (for embedding or screenshots)")
     p.add_argument("--min-sessions", type=int, default=3)
     p.add_argument("--window-hours", type=float, default=24.0)
     p.set_defaults(func=cmd_report)
@@ -302,6 +304,7 @@ def register(sub) -> None:
     p.add_argument("--home")
     p.add_argument("--rules")
     p.add_argument("--envelope")
+    p.add_argument("--tools", action="append", help="MCP/protocol tool registry YAML (repeatable)")
     p.set_defaults(func=cmd_serve)
 
     p = sub.add_parser("bench", help="Measure runtime decision latency on this machine")

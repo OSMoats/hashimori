@@ -28,7 +28,7 @@ def make_handler(gate: Gate, home: Path, mode: str, grant: bool):
     lock = threading.Lock()
 
     class H(BaseHTTPRequestHandler):
-        def log_message(self, *a):  # keep the terminal clean for the demo
+        def log_message(self, *a):  # decisions go to the audit log, not stderr
             pass
 
         def _send(self, obj: dict | None) -> None:
@@ -74,10 +74,10 @@ def make_handler(gate: Gate, home: Path, mode: str, grant: bool):
 
 
 def serve(port: int = 8787, home: str | None = None, rules: str | None = None,
-          envelope: str | None = None) -> None:
+          envelope: str | None = None, tools: list | None = None) -> None:
     home_p = Path(home or os.environ.get("HASHIMORI_HOME") or Path.cwd() / ".hashimori")
     home_p.mkdir(parents=True, exist_ok=True)
-    gate = Gate(RuntimeConfig(rules, envelope), home=home_p)
+    gate = Gate(RuntimeConfig(rules, envelope, tools), home=home_p)
     from hashimori.runtime.ledger import Ledger
     gate._ledger = Ledger(home_p / "ledger.db", threaded=True)
     mode = os.environ.get("HASHIMORI_MODE", "enforce")

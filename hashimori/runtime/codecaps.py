@@ -209,7 +209,7 @@ def analyze_python(src: str) -> dict:
 
 
 def enabled() -> bool:
-    """HASHIMORI_NO_CODE_INSPECT=1 turns inspection off (used for ablation in demo/eval)."""
+    """HASHIMORI_NO_CODE_INSPECT=1 turns inspection off (used for the ablation in benchmarks/runtime)."""
     return os.environ.get("HASHIMORI_NO_CODE_INSPECT", "") not in ("1", "true", "yes")
 
 
