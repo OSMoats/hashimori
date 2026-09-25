@@ -1,0 +1,32 @@
+{
+  "use_case": {
+    "name": "Support Escalation Orchestrator",
+    "description": "An orchestrator spawns sub-agents to draft and send account remediation actions across several hops, and the resulting actions carry no link back to who authorized the chain.",
+    "audience": "internal",
+    "affected_people": 200
+  },
+  "data": {
+    "categories": ["personal_data"]
+  },
+  "model": {
+    "provider": "internal_orchestration_framework",
+    "provider_approved": true
+  },
+  "oversight": {
+    "human_in_loop": false
+  },
+  "agent": {
+    "identity_registered": true,
+    "owner_assigned": true,
+    "owner_active": true,
+    "can_originate_and_approve": false,
+    "delegation_traceable": false,
+    "delegation_depth": 3,
+    "autonomous_actions": true,
+    "irreversible_effects": false
+  },
+  "observability": {
+    "logging": true,
+    "runtime_monitoring": true
+  }
+}
