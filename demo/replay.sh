@@ -11,6 +11,7 @@ REPO="$(dirname "$DEMO_DIR")"
 WS="$DEMO_DIR/workspace"
 HM="${HM:-$DEMO_DIR/.venv/bin/hashimori}"
 [[ -x "$HM" ]] || HM="$(command -v hashimori)"
+[[ -n "$HM" ]] || { echo "hashimori not found: run ./demo/setup.sh first (or set HM=/path/to/hashimori)" >&2; exit 2; }
 PAUSE="${PAUSE:-0}"
 HOME_DIR="$(mktemp -d -t hashimori-replay-XXXX)"
 ENVELOPE="$WS/.hashimori/envelope.json"
