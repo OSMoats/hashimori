@@ -1,0 +1,32 @@
+# AI agent governance rule pack — policy decision tests.
+# Run: hashimori test examples/tests/ai-agent-governance-decisions.yaml \
+#        --rules rulepacks/red-zone rulepacks/ai-agent-governance rulepacks/baseline
+#
+# This pack defines no tiers, so it composes safely with baseline (or any
+# other single tiered pack) without the tier-shadowing failure mode
+# documented in rulepacks/finance/README.md.
+
+tests:
+  - name: unregistered agent touching non-public data is denied
+    context_file: ../intake/agent-gov-unregistered-identity.json
+    expect: {decision: DENIED, red_zones: [AG-RZ-001]}
+
+  - name: agent that originates and approves its own consequential action is denied
+    context_file: ../intake/agent-gov-no-separation-of-duties.json
+    expect: {decision: DENIED, red_zones: [AG-RZ-002]}
+
+  - name: untraceable delegation chain with no human in the loop is denied
+    context_file: ../intake/agent-gov-untraceable-delegation.json
+    expect: {decision: DENIED, red_zones: [AG-RZ-003]}
+
+  - name: standing access with a stale review and an inactive owner routes to elevated review
+    context_file: ../intake/agent-gov-standing-access-stale-review.json
+    expect: {decision: NEEDS_REVIEW, tier: elevated_review}
+
+  - name: fully registered, owned, scoped, and reviewed agent fast-tracks
+    context_file: ../intake/agent-gov-fully-governed.json
+    expect: {decision: APPROVED, tier: fast_track}
+
+  - name: vague agent submission fails closed, never approves
+    context_file: ../intake/agent-gov-vague-submission.json
+    expect: {decision: NEEDS_REVIEW}
