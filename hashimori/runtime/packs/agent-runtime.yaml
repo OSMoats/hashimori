@@ -21,7 +21,7 @@ red_zones:
       guardrail config. This is how a prompt injection becomes code execution
       (see CVE-2025-54135, "CurXecute").
     remedy: A human edits agent configuration, outside the agent session.
-    refs: [OWASP-ASI03, MITRE-ATLAS:AML.T0081]
+    refs: [OWASP-Agentic-Top10:Identity-and-Privilege-Abuse, MITRE-ATLAS:AML.T0081]
 
   - id: RUNTIME-002
     name: Persistence or VCS hook tampering
@@ -33,7 +33,6 @@ red_zones:
             - {path: effect.tags, contains: vcs_control}
     message: Shell profiles, launch agents, cron, and git hooks run code later, without the agent.
     remedy: Make the change by hand, or add a reviewed script to the repo.
-    refs: [OWASP-ASI05]
 
   - id: RUNTIME-003
     name: System path modification
@@ -56,7 +55,7 @@ red_zones:
       outside the envelope — the shape of DNS/HTTP exfiltration via an
       otherwise-allowed tool (see CVE-2025-55284).
     remedy: None for the agent. If this is legitimate, a human runs it.
-    refs: [OWASP-ASI02, MITRE-ATLAS:AML.T0086]
+    refs: [OWASP-Agentic-Top10:Tool-Misuse-and-Exploitation, MITRE-ATLAS:AML.T0086]
 
   - id: RUNTIME-005
     name: Lethal trifecta completed
@@ -70,7 +69,7 @@ red_zones:
       This session has read confidential data AND content an attacker could
       have written. Any new outbound channel now is a leak path.
     remedy: Start a fresh session for external communication, or add the destination to the envelope.
-    refs: [OWASP-ASI02, OWASP-LLM03-2026]
+    refs: [OWASP-Agentic-Top10:Tool-Misuse-and-Exploitation, OWASP-LLM-Top10:Excessive-Agency]
 
   - id: RUNTIME-006
     name: Restricted data leaving the envelope
@@ -91,7 +90,6 @@ red_zones:
         - {path: effect.blast, gte: 1000}
     message: Recursive delete of a home directory, root, or a path outside the workspace.
     remedy: No agent path. A human does this.
-    refs: [MITRE-ATLAS:AML.T0101]
 
   - id: RUNTIME-008
     name: Secret material in an outbound payload
